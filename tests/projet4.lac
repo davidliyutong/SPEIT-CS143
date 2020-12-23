@@ -1,0 +1,52 @@
+\ " 1+2+3" calculate . "  " count type
+
+\ : f 1 + dup . f ;
+
+\ f
+( defer u
+
+variable x
+
+123 x !
+
+x @ .
+
+: 宇桐 " Yutong" count type ;
+
+: 厉 " LI " count type 9 . ;
+
+' 厉 is u
+
+厉
+
+: essai -1 if 1 else 2 then . ;
+
+essai
+
+: essai2 2 if 1 then 9 . ;
+
+essai2
+
+: test " Not" count type ;)
+
+
+\ " -(1-2)+(3-4)x-5x-9" calculate .
+
+( : test " Not" count type ;
+
+test
+
+
+" Alain" count type
+
+2 3 4 * - 5 6 + * .
+
+: incr 1 + ;
+: 2+. incr incr . ;
+
+: 2+. 2 + . ;
+
+5 2+.
+
+6 incr . )
+

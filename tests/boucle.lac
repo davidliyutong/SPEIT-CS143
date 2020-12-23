@@ -1,0 +1,7 @@
+variable x
+
+5 x !
+
+: test while x @ 0 = if break else x @ 1 - x ! then x @ . loop ;
+
+test
