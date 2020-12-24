@@ -141,6 +141,7 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
                     }
                     case VM_CFA_LOOP: {
                         while (stack_is_empty(&StkBreak) != TRUE) {
+                            /* A while loop may have more thant one breaks */
                             iBreakStart = stack_pop_vm(&StkBreak);
                             if (iBreakStart >= 0) {
                                 g_Env.VMTable.OpCodes[iBreakStart] = g_Env.VMTable.iTail + 2;

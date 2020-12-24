@@ -63,8 +63,8 @@ inline int stack_top_vm(lac_stack_t *pStack) {
     /* Access the top of stack without pop */
 
     if (stack_is_empty(pStack)) {
-        printf("\n[ Warning ] Stack is empty\n");
-        exit(ERR_DATA);
+        printf("\n[ Warning ] Stack is empty, 0 is returned\n");
+        return 0;
     } else {
         return *(int *) (pStack->pTop->pData);
     }

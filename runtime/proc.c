@@ -276,12 +276,10 @@ void proc_func_if() {
 void proc_func_else() {
     /* If else symbol is encountered, then the if branch must be taken */
     /* Jump to the end of conditonal branch */
-
-    int iAddr = stack_pop_vm(&g_Env.StkReturn);
-    stack_push_vm(&g_Env.StkReturn, g_Env.VMTable.OpCodes[iAddr + 1]);
 #ifdef DEBUG
-    printf("\n [ Debug ] Function Else jumps to %d from %d\n", g_Env.VMTable.OpCodes[iAddr + 1], iAddr);
+    printf("\n [ Debug ] Function Else\n");
 #endif
+    proc_func_jr();
 }
 
 void proc_func_then() {
@@ -318,15 +316,20 @@ void proc_func_while() {
 }
 
 void proc_func_loop() {
-    int iAddr;
-    iAddr = stack_pop_vm(&g_Env.StkReturn);
-    stack_push_vm(&g_Env.StkReturn, g_Env.VMTable.OpCodes[iAddr + 1]);
+#ifdef DEBUG
+    printf("\n[ Debug ] Looping ...\n");
+    fflush(stdout);
+#endif
+    proc_func_jr();
 }
 
 void proc_func_break() {
-    int iAddr;
-    iAddr = stack_pop_vm(&g_Env.StkReturn);
-    stack_push_vm(&g_Env.StkReturn, g_Env.VMTable.OpCodes[iAddr + 1]);
+#ifdef DEBUG
+    printf("\n[ Debug ] Break ...\n");
+    fflush(stdout);
+#endif
+    proc_func_jr();
+
 }
 
 void proc_func_jr() {

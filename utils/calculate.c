@@ -62,20 +62,21 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             memset(cNumStrTmp, 0, MAX_NUMBER_LEN);
             iNumberStart = idx;
 
-            /* Get the integer number */
+            /* Get the entire number */
             while (sExpression[idx] >= '0' && sExpression[idx] <= '9') { // Can only handle integers.
                 ++idx;
             }
+
             iNumberEnd = idx;
-            memcpy(cNumStrTmp, sExpression + iNumberStart, sizeof(char) * (iNumberEnd - iNumberStart));
+            strncpy(cNumStrTmp, sExpression + iNumberStart, iNumberEnd - iNumberStart);
 
             /* Translate the value to int using strtol */
             iNumValTmp = (int) strtol(cNumStrTmp, NULL, 10); // Convertion from long to int
             NodeTmp.type = CALC_NUMBER;
             NodeTmp.u_Data.iNumber = iNumValTmp; // Used for Tree presentation
             NodeTmp.u_Value.iNumber = iNumValTmp; // Used for calculation
-            NodeTmp.lNode = NULL;
-            NodeTmp.rNode = NULL;
+            NodeTmp.lNode = NodeTmp.rNode = NULL;
+
             queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_NUMBER;
             continue; // We modified the idx, no need to increase idx in the while loop
@@ -87,10 +88,11 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
                 printf("\n[ Warning ] Syntax error, {<number>|<)>}{<(>} not allowed\n");
                 return CALC_STAT_ERR;
             }
+
             NodeTmp.type = CALC_OP_PAR_LEFT;
             NodeTmp.u_Data.cOP = cTmp;
-            NodeTmp.lNode = NULL;
-            NodeTmp.rNode = NULL;
+            NodeTmp.lNode = NodeTmp.rNode = NULL;
+
             queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_OP_PAR_LEFT;
         } else if (cTmp == ')') {
@@ -104,20 +106,18 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
 
             NodeTmp.type = CALC_OP_PAR_RIGHT;
             NodeTmp.u_Data.cOP = cTmp;
-            NodeTmp.lNode = NULL;
-            NodeTmp.rNode = NULL;
+            NodeTmp.lNode = NodeTmp.rNode = NULL;
+
             queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_OP_PAR_RIGHT;
         } else if (cTmp == '+' || cTmp == '-' || cTmp == 'x' || cTmp == '/') {
             /* Signed number handle: if the previous symble is '(' or operator, and a pseudo zero in the front */
             if ((CalcStat == CALC_STAT_BEGIN || CalcStat == CALC_STAT_OP || CalcStat == CALC_STAT_OP_PAR_LEFT) &&
                 (cTmp == '+' || cTmp == '-')) {
-                queue_push_back(pqueSymbols, (void *) &NodeZero,
-                                sizeof(exp_btnode_t)); // a signed number is encourtered, add zero
+                queue_push_back(pqueSymbols, (void *) &NodeZero, sizeof(exp_btnode_t)); // a signed number is encourtered, add zero
                 /* The node has a higher priority */
                 NodeTmp.type = CALC_OP_3;
-            } else if ((CalcStat == CALC_STAT_OP || CalcStat == CALC_STAT_OP_PAR_LEFT) &&
-                       (cTmp == '/' || cTmp == 'x')) {
+            } else if ((CalcStat == CALC_STAT_OP || CalcStat == CALC_STAT_OP_PAR_LEFT) && (cTmp == '/' || cTmp == 'x')) {
                 /* We forbid the {<op>|<(>}{<x>|</>} combination */
                 printf("\n[ Warning ] Syntax error, {<op>|<(>}{<x>|</>} not allowed\n");
                 return CALC_STAT_ERR;
@@ -132,8 +132,8 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             }
             /* end of signed number handle */
             NodeTmp.u_Data.cOP = cTmp;
-            NodeTmp.lNode = NULL;
-            NodeTmp.rNode = NULL;
+            NodeTmp.lNode = NodeTmp.rNode = NULL;
+
             queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_OP;
         } else if (cTmp == ' ') {
@@ -288,6 +288,7 @@ int build_exp_tree(lac_queue_t *pquePostfixExp, exp_btnode_t *pExpTreeRoot) {
             bFlag = TRUE;
         }
     }
+    
     /* Finally we get the result and free up memory */
     stack_pop(&stkExpTree, (void *) pExpTreeRoot);
     stack_clear(&stkExpTree);

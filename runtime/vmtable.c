@@ -90,10 +90,11 @@ inline int vmtable_add_vec(vmtable_t *pVMTable, void *pVec, int iLen, int iSize)
                 break;
             default:
                 printf("\n[ Error ] The Size of each element must be 1(char) or 4(int) Byte\n");
+                vmtable_revert(pVMTable);
                 exit(ERR_MEM);
         }
     }
-
+    vmtable_checkout(pVMTable);
     return TRUE;
 }
 

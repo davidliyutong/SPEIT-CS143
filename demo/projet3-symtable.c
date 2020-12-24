@@ -18,7 +18,7 @@ int main() {
             printf("\n[ Warning ] Duplicated symbol found: %s\n", symbols[i]);
         }
     }
-
+    symtable_checkout(&SymTable);
     disp_symtable(&SymTable);
 
     return 0;

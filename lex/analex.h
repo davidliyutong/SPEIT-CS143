@@ -13,8 +13,8 @@
 #include "../common/macros.h"
 #include "../common/queue.h"
 
-#define REGEX_COMMENT       "[\n| ]\\( [^\\)\\\\]*?\\)|[\n| ]\\\\[^\n]*"
-#define REGEX_STRING        "[\n| ]\" [^\"]*?\""
+#define REGEX_COMMENT       "[\n| ]\\( [^\\)\\\\]*\\)|[\n| ]\\\\[^\n]*"
+#define REGEX_STRING        "[\n| ]\" [^\"]*\""
 #define REGEX_IDENTIFIER    "[^ \n]+"
 #define REGEX_INTEGER       "(\\-|\\+)?[0-9]+(\\.[0-9]+)?[ |\n]"
 

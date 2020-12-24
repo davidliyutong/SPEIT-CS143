@@ -1,30 +1,30 @@
 : sort
-variable sort_vec sort_vec !
-variable sort_len
+variable sort_vec sort_vec ! \ char * vec = input;
+variable sort_len \ int len;
 
-sort_vec @ count sort_len !
-variable sort_i 0 sort_i !
-variable sort_j 0 sort_j !
-variable tmp 0 tmp !
+sort_vec @ count sort_len ! \ len = strlen(vec);
+variable sort_i 0 sort_i ! \ int i = 0;
+variable sort_j 0 sort_j ! \ int j = 0;
+variable tmp 0 tmp ! \ int tmp = 0;
 
-while
-sort_i @ sort_len @ = if break then
-    while
-    sort_j @ sort_len @ = if break then
-        sort_vec @ sort_j @ + @ dup sort_vec @ sort_i @ + @ < if
-            sort_vec @ sort_i @ + @
+while 
+sort_i @ sort_len @ = if break then \ while (i != len)
+    while 
+    sort_j @ sort_len @ = if break then \ while (j != len)
+        sort_vec @ sort_j @ + @ dup sort_vec @ sort_i @ + @ < if \ if(vec[i] < vec[j])
+            sort_vec @ sort_i @ + @ \ { swap(vec[i],vec[j]); }
             sort_vec @ sort_j @ + !
             sort_vec @ sort_i @ + !
         else
-            drop
+            drop \ else{;}
         then
-        sort_j @ 1 + sort_j !
+        sort_j @ 1 + sort_j ! \ j++;
     loop
-    sort_i @ 1 + dup sort_i ! sort_j !
+    sort_i @ 1 + dup sort_i ! sort_j ! \ i++ ; j = i;
 loop
-;
+; \ return ;
 
-: go_sort
+: go_sort \ entrance
 " bubble_sort (" count type
     dup count type
     " ) vaut : " count type
