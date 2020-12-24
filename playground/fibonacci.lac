@@ -1,0 +1,22 @@
+: fibonacci
+variable fibonacci_x 
+fibonacci_x !
+fibonacci_x @ 1 = if 1 else 
+    fibonacci_x @ 2 = if 1 else 
+        fibonacci_x @ 1 - fibonacci_x @ 2 - fibonacci swap
+        fibonacci + 
+    then 
+then
+;
+
+defer fib
+' fibonacci is fib
+
+: go_fib
+    " Fibonacci(" count type
+        dup .
+        " ) vaut : " count type
+    fib .
+;
+
+6 go_fib

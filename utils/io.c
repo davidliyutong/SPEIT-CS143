@@ -33,11 +33,13 @@ int input_to_buffer(FILE *pInputFile, char **ppsReadBuffer) {
         iReadCnt = (int) fread(*ppsReadBuffer + 1, 1, (size_t) lSize, pInputFile);
         if (iReadCnt != lSize) {
             printf("\n[ Error ] IO error\n");
+            free(ppsReadBuffer);
             exit(ERR_IO);
         }
 
         (*ppsReadBuffer)[iReadCnt + 1] = '\n';
         // return the number of byte read
+        fclose(pInputFile);
         return iReadCnt + 1;
     } else {
         printf("\n[ Error ] Memory error\n");

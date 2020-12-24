@@ -9,7 +9,7 @@
 #include "runtime/interpret.h"
 
 int main(int argc, const char *argv[]) {
-    extern vmenv_t g_Env;
+//    extern vmenv_t g_Env;
     g_proc_env_init();
     g_proc_compile();
     bool bOutputInfo = FALSE;
@@ -19,33 +19,11 @@ int main(int argc, const char *argv[]) {
 
     /* */
     switch (argc) {
-        case 1:
-            /* Interpret mode */
-#ifdef DEBUG
-            printf(VERSION_INFO_DEBUG);
-#else
-            printf(VERSION_INFO);
-#endif
-            char sInputBuffer[MAX_INPUT_LEN];
-            memset(sInputBuffer, 0, sizeof(char) * MAX_INPUT_LEN);
-            sInputBuffer[0] = '\n'; // Manually add a return character to the line start
-            printf(">>>");
-            while (fgets(sInputBuffer + 1, MAX_INPUT_LEN, (FILE *) stdin) != NULL) {
-                iReadCnt = (int) strlen(sInputBuffer);
-                match_lac(sInputBuffer, sInputBuffer + iReadCnt, &queRes);
-                interpret(sInputBuffer, &queRes);
-
-                /* After interpret, clear queue and input buffer */
-                queue_clear(&queRes);
-                memset(sInputBuffer, 0, sizeof(char) * MAX_INPUT_LEN);
-                sInputBuffer[0] = '\n'; // Manually add a return character to the line start
-                printf("\n>>>");
-            }
-
-            break;
         case 3: {
             if (strncmp(argv[2], "-V", 2) == 0 || strncmp(argv[2], "-v", 2) == 0) {
                 bOutputInfo = TRUE;
+            } else {
+                bOutputInfo = FALSE;
             }
         }
         case 2: {
@@ -67,6 +45,30 @@ int main(int argc, const char *argv[]) {
                 fflush(stdout);
             }
             interpret(psReadBuffer, &queRes);
+            free(psReadBuffer);
+        }
+        case 1: {
+            /* Interpret mode */
+#ifdef DEBUG
+            printf(VERSION_INFO_DEBUG);
+#else
+            printf(VERSION_INFO);
+#endif
+            char sInputBuffer[MAX_INPUT_LEN + 1];
+            memset(sInputBuffer, 0, sizeof(char) * MAX_INPUT_LEN);
+            sInputBuffer[0] = '\n'; // Manually add a return character to the line start
+            printf(">>>");
+            while (fgets(sInputBuffer + 1, MAX_INPUT_LEN, (FILE *) stdin) != NULL) {
+                iReadCnt = (int) strlen(sInputBuffer);
+                match_lac(sInputBuffer, sInputBuffer + iReadCnt, &queRes);
+                interpret(sInputBuffer, &queRes);
+
+                /* After interpret, clear queue and input buffer */
+                queue_clear(&queRes);
+                memset(sInputBuffer, 0, sizeof(char) * MAX_INPUT_LEN);
+                sInputBuffer[0] = '\n'; // Manually add a return character to the line start
+                printf("\n>>>");
+            }
             break;
         }
         default:
@@ -74,7 +76,6 @@ int main(int argc, const char *argv[]) {
             break;
             /* execute mode */
     }
-
 
     return 0;
 

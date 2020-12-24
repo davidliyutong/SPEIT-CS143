@@ -1,0 +1,42 @@
+: catenate
+\ Data_Stk: [...| &input1 | &input2 |<- top
+variable catenate_s1 \ char * s1
+variable catenate_s2 \ char * s2
+catenate_s2 ! \ s2 = & input2
+catenate_s1 ! \ s1 = & input1
+
+\ Data_Stk: [...| <- top
+
+variable catenate_i 0 catenate_i ! \ int i = 0
+variable catenate_j 0 catenate_j ! \ int j = 0
+
+vec catenate_ans 20 \ char ans[20]
+
+variable catenate_l1 catenate_s1 @ count catenate_l1 ! drop \ int l1 = strlen(s1)
+variable catenate_l2 catenate_s2 @ count catenate_l2 ! drop \ int l2 = strlen(s2)
+
+
+while
+catenate_i @ catenate_l1 @ = if break then \ while (i != l1)
+catenate_s1 catenate_i @ + @ catenate_ans catenate_j @ + ! \ ans[j] = s1[i]
+catenate_i @ 1 + catenate_i ! \ i++
+catenate_j @ 1 + catenate_j ! \ j++
+loop
+catenate_j @ 1 + catenate_j ! \ j++
+
+0 catenate_i ! \ i = 0
+
+while
+catenate_l2 @ catenate_i @ = if break then \ while (i != l2)
+catenate_s2 catenate_i @ + @ catenate_ans catenate_j @ + ! \ ans[j] = s2[i]
+catenate_i @ 1 + catenate_i ! \ i++
+catenate_j @ 1 + catenate_j ! \ j++
+loop
+catenate_j @ 1 + catenate_j ! \ j++
+
+\ Data_Stk: [...| &input1 | &input2 |<- top
+; \ return
+
+: 0= 0 = ;
+: 1- 1 - ;
+: cr 1 + ;

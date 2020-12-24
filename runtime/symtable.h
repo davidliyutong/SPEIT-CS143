@@ -24,6 +24,12 @@ int symtable_search(symtable_t *pTable, u_symbol *pInput);
 
 int symtable_expand(symtable_t *pSymTable);
 
+int symtable_del(symtable_t *pSymTable);
+
+int symtable_checkout(symtable_t *pSymTable);
+
+int symtable_revert(symtable_t *pSymTable);
+
 int symtable_add(symtable_t *pSymTable, const char *pSymbolStr, int iLength);
 
 int symtable_get_cfa(symtable_t *pSymTable, int iSymbolIdx);

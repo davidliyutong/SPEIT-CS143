@@ -53,7 +53,7 @@ int symtable_cmp(u_symbol *pSymTableLoc, u_symbol *pInput) {
 int symtable_search(symtable_t *pTable, u_symbol *pInput) {
     /* Search the symbol in the table */
     int pTableLocIdx = pTable->iTail; // A pointer to the tail
-    if (pTableLocIdx == 0) return FALSE; // The table is empty;
+    if (pTableLocIdx == 0) return INFO_SYMBOL_NOT_FOUND; // The table is empty;
     while (TRUE) {
         /* Got a match */
         if (symtable_cmp(pTable->Symbols + pTableLocIdx, pInput)) {
@@ -65,7 +65,7 @@ int symtable_search(symtable_t *pTable, u_symbol *pInput) {
         }
         /* Reach the begining of table */
         if (pTableLocIdx <= 0) {
-            return -1;
+            return INFO_SYMBOL_NOT_FOUND;
         }
     }
 }
@@ -82,21 +82,39 @@ int symtable_expand(symtable_t *pSymTable) {
     return TRUE;
 }
 
+int symtable_checkout(symtable_t *pSymTable) {
+    /* Checkout the modification*/
+    pSymTable->iCheckPoint = pSymTable->iLength;
+    return TRUE;
+}
+
+int symtable_revert(symtable_t *pSymTable) {
+    /* Revert to previous checkpoint*/
+    while (pSymTable->iLength > pSymTable->iCheckPoint) {
+        symtable_del(pSymTable);
+    }
+    return TRUE;
+}
+
+int symtable_del(symtable_t *pSymTable) {
+    pSymTable->Symbols[pSymTable->iTail--].i = 0;
+    return TRUE;
+}
+
 int symtable_add(symtable_t *pSymTable, const char *pSymbolStr, int iLength) {
 
     u_symbol SymbolInput[MAX_LEXEME_LEN];
     int iRet;
     iRet = str_to_symbol(pSymbolStr, iLength, SymbolInput);
     if (iRet != TRUE) {
-        return FALSE;
+        printf("\n[ Warning ] Symbol %.*s is too long \n", iLength, pSymbolStr);
+        return ERR_SYMBOL_OVERFLOW; // (-2)
     }
 
-    /*
     iRet = symtable_search(pSymTable, SymbolInput);
-    if (iRet > 0) { // Duplicate symbol;
-        return FALSE;
+    if (iRet >= 0) { // Duplicate symbol;
+        return iRet; // Return the position of this symbol
     }
-     */
 
     // The symbol is new;
     int iLengthTmp = pSymTable->iLength;
@@ -109,7 +127,7 @@ int symtable_add(symtable_t *pSymTable, const char *pSymbolStr, int iLength) {
     pSymTable->iLength = iLengthTmp + 3 + iLength;
     pSymTable->iNumSymbols += 1;
 
-    return TRUE;
+    return INFO_SYMBOL_NOT_FOUND; // (-1)
 }
 
 int symtable_get_cfa(symtable_t *pSymTable, int iSymbolIdx) {

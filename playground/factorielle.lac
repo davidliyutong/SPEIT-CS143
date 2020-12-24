@@ -15,9 +15,9 @@ l'analyseur lexical écrit en phase 1 du projet)
     then ;
 
 : go ( n -- )
-    " Factorielle" count type
+    " Factorielle (" count type
     dup .
-    " vaut : 
+    " ) vaut : 
 " count type
     fact . cr ;
 

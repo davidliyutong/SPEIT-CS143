@@ -3,7 +3,6 @@
 //
 
 #include <stdio.h>
-#include "../deprecated/strtable.h"
 
 int main() {
     strtable_t StrTable;

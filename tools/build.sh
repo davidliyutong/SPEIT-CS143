@@ -38,7 +38,7 @@ echo "[ Info ] Build projet2"
 gcc ${PROJET_DIR}/demo/projet2-calculate.c ${UTILS_H} ${UTILS_C} ${COMMON_H} ${COMMON_C} -o build/projet2 -Wall ${GCC_FLAGS}
 
 echo "[ Info ] Build projet3"
-gcc ${PROJET_DIR}/demo/projet3-symtable.c ${UTILS_H} ${UTILS_C} ${COMMON_H} ${COMMON_C} ${RUNTIME_H} ${RUNTIME_C} -o build/projet3 -Wall ${GCC_FLAGS}
+gcc ${PROJET_DIR}/demo/projet3-symtable.c ${LEX_H} ${LEX_C} ${UTILS_H} ${UTILS_C} ${COMMON_H} ${COMMON_C} ${RUNTIME_H} ${RUNTIME_C} -o build/projet3 -Wall ${GCC_FLAGS}
 
 echo "[ Info ] Build projet4"
 gcc ${PROJET_DIR}/demo/projet4-lac.c ${LEX_H} ${LEX_C} ${UTILS_H} ${UTILS_C} ${COMMON_H} ${COMMON_C} ${RUNTIME_H} ${RUNTIME_C} -o build/projet4 -Wall ${GCC_FLAGS}

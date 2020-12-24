@@ -42,6 +42,27 @@ inline int vmtable_add(vmtable_t *pVMTable, int iOpCode) {
     return TRUE;
 };
 
+inline int vmtable_del(vmtable_t *pVMTable) {
+    /* Delete a OpCode from the vmtable */
+    pVMTable->OpCodes[pVMTable->iTail--] = VM_CTRL_FUNC_SYM;
+    return TRUE;
+};
+
+inline int vmtable_checkout(vmtable_t *pVMTable) {
+    /* Checkout the modification*/
+    pVMTable->iCheckPoint = pVMTable->iTail;
+    return TRUE;
+};
+
+inline int vmtable_revert(vmtable_t *pVMTable) {
+    /* Revert the modification*/
+    while (pVMTable->iTail > pVMTable->iCheckPoint) {
+        vmtable_del(pVMTable);
+    }
+    pVMTable->iCheckPoint = pVMTable->iTail;
+    return TRUE;
+};
+
 inline int vmtable_add_vec(vmtable_t *pVMTable, void *pVec, int iLen, int iSize) {
     /* Add a vector or char string to the VMtable, if it is a string, an 0 will be append to the end */
 

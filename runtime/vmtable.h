@@ -18,6 +18,12 @@ int vmtable_init(vmtable_t *pVMTable);
 
 int vmtable_expand(vmtable_t *pVMTable);
 
+int vmtable_del(vmtable_t *pVMTable);
+
+int vmtable_checkout(vmtable_t *pVMTable);
+
+int vmtable_revert(vmtable_t *pVMTable);
+
 int vmtable_add(vmtable_t *pVMTable, int iOpCode);
 
 int vmtable_add_vec(vmtable_t *pVMTable, void *pVec, int iLen, int iSize);

@@ -1,0 +1,37 @@
+: sort
+variable sort_vec sort_vec !
+variable sort_len
+
+sort_vec @ count sort_len !
+variable sort_i 0 sort_i !
+variable sort_j 0 sort_j !
+variable tmp 0 tmp !
+
+while
+sort_i @ sort_len @ = if break then
+    while
+    sort_j @ sort_len @ = if break then
+        sort_vec @ sort_j @ + @ dup sort_vec @ sort_i @ + @ < if
+            sort_vec @ sort_i @ + @
+            sort_vec @ sort_j @ + !
+            sort_vec @ sort_i @ + !
+        else
+            drop
+        then
+        sort_j @ 1 + sort_j !
+    loop
+    sort_i @ 1 + dup sort_i ! sort_j !
+loop
+;
+
+: go_sort
+" bubble_sort (" count type
+    dup count type
+    " ) vaut : " count type
+    sort sort_vec @ count type
+;
+
+" eastdfffruwieouawrbceyurug" go_sort
+
+
+

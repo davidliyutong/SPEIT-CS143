@@ -1,0 +1,121 @@
+\ Fichier " factorielle.lac"
+" uu"
+( Ce fichier est un "exemple" étudié pour tester
+l'analyseur lexical écrit en phase 1 du projet)
+\ BlahBlahBlah
+: 0= 0 = ;
+: 1- 1 - ;
+: cr 1 + ;
+: fact ( n -- n!)
+    dup 0= 
+    if
+        drop 1
+    else 
+        dup 1- recurse *
+    then ;
+
+: go ( n -- )
+    " Factorielle" count type
+    dup .
+    " vaut : 
+" count type
+    fact . cr ;
+
+6 go
+
+: catenate
+\ Data_Stk: [...| &input1 | &input2 |<- top
+variable catenate_s1 \ char * s1
+variable catenate_s2 \ char * s2
+catenate_s2 ! \ s2 = & input2
+catenate_s1 ! \ s1 = & input1
+
+\ Data_Stk: [...| <- top
+
+variable catenate_i 0 catenate_i ! \ int i = 0
+variable catenate_j 0 catenate_j ! \ int j = 0
+
+vec catenate_ans 20 \ char ans[20]
+
+variable catenate_l1 catenate_s1 @ count catenate_l1 ! drop \ int l1 = strlen(s1)
+variable catenate_l2 catenate_s2 @ count catenate_l2 ! drop \ int l2 = strlen(s2)
+
+
+while
+catenate_i @ catenate_l1 @ = if break then \ while (i != l1)
+catenate_s1 catenate_i @ + @ catenate_ans catenate_j @ + ! \ ans[j] = s1[i]
+catenate_i @ 1 + catenate_i ! \ i++
+catenate_j @ 1 + catenate_j ! \ j++
+loop
+catenate_j @ 1 + catenate_j ! \ j++
+
+0 catenate_i ! \ i = 0
+
+while
+catenate_l2 @ catenate_i @ = if break then \ while (i != l2)
+catenate_s2 catenate_i @ + @ catenate_ans catenate_j @ + ! \ ans[j] = s2[i]
+catenate_i @ 1 + catenate_i ! \ i++
+catenate_j @ 1 + catenate_j ! \ j++
+loop
+catenate_j @ 1 + catenate_j ! \ j++
+
+\ Data_Stk: [...| &input1 | &input2 |<- top
+; \ return
+
+" Bonjour" " Alain !" catenate
+
+" The length of the first string is: " count type catenate_l1 @ . " 
+" count type
+" The length of the second string is: " count type catenate_l2 @ . " 
+" count type
+" The catenated string is: " count type catenate_ans @ catenate_j @ type
+
+" 1+2+3" calculate . "  " count type
+
+defer u
+
+variable x
+
+123 x !
+
+x @ .
+
+: 宇桐 " Yutong" count type ;
+
+: 厉 " LI " count type 9 . ;
+
+' 厉 is u
+
+厉
+
+: essai -1 if 1 else 2 then . ;
+
+essai
+
+: essai2 2 if 1 then 9 . ;
+
+essai2
+
+: test " Not" count type ;
+
+
+" -(1-2)+(3-4)x-5x-9" calculate .
+
+: test " Not" count type ;
+
+test
+
+
+" Alain" count type
+
+2 3 4 * - 5 6 + * .
+
+: incr 1 + ;
+: 2+. incr incr . ;
+
+: 2+. 2 + . ;
+
+5 2+.
+
+6 incr . 
+

@@ -13,15 +13,16 @@
 #include "../common/macros.h"
 #include "../common/queue.h"
 
-#define REGEX_COMMENT       "(^|[\n| ])\\( [^\\)\\\\]*?\\)|(^|[\n| ])\\\\[^\n]*"
-#define REGEX_STRING        "(^|[\n| ])\" [^\"]*?\""
+#define REGEX_COMMENT       "[\n| ]\\( [^\\)\\\\]*?\\)|[\n| ]\\\\[^\n]*"
+#define REGEX_STRING        "[\n| ]\" [^\"]*?\""
 #define REGEX_IDENTIFIER    "[^ \n]+"
 #define REGEX_INTEGER       "(\\-|\\+)?[0-9]+(\\.[0-9]+)?[ |\n]"
 
-// chaîne de caractère: (?:^|\s)"\s([^"])*"                             (^|[\n|\s])" [^"]*?"
-// commentaire        : (?:^|\s)\(\s(.*?)\)|(?:^|\s)\\\s(.*?)[\n]       (^|[\n|\s])\( [^\)\\]*?\)|(^|[\n|\s])\\[^\n]*\n
-// identificateurs    : ([^\s]+?)[\s|\n]                                [^\s\n"\\\(\)]+                                     [^\s\n]+
-// entiers            : N/A                                             (\-|\+)?[0-9]+(\.[0-9]+)?[\s|\n]
+// v_2
+// commentaire        : [\n| ]\( [^\)\\]*?\)|[\n| ]\\[^\n]*\n
+// chaîne de caractère: [\n| ]" [^"]*?"
+// identificateurs    : [^ \n]+
+// entiers            : (\-|\+)?[0-9]+(\.[0-9]+)?[ |\n]
 
 int isInteger(const char *pcBeg, const char *pcFin, regex_t *pregInteger);
 

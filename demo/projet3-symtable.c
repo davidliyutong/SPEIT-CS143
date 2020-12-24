@@ -10,10 +10,15 @@ int main() {
 
     symtable_t SymTable;
     symtable_init(&SymTable);
-    symtable_add(&SymTable, "+", 1);
-    symtable_add(&SymTable, "swap", 4);
-    symtable_add(&SymTable, "swap", 4);
-    symtable_add(&SymTable, "swapp", 5);
+    char symbols[4][6] = {"+", "swap", "swap", "swapp"};
+    int iRet = 0;
+    for (int i = 0; i < 4; i++) {
+        iRet = symtable_add(&SymTable, symbols[i], strlen(symbols[i]));
+        if (iRet > 0) {
+            printf("\n[ Warning ] Duplicated symbol found: %s\n", symbols[i]);
+        }
+    }
+
     disp_symtable(&SymTable);
 
     return 0;

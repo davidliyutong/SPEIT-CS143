@@ -10,6 +10,15 @@
 #include <stdio.h>
 #include "../common/types.h"
 
+#define INIT_STR_TABLE_LEN 0x400
+
+typedef struct strtable_t {
+    int iMaxLength; // The max length of the vm table
+    int iTail; // The place of last char
+    char *cStr;
+} strtable_t;
+
+
 /* We choosed a different way to handle string [?] */
 /* The strings are stored in a seperated strtable,
  * only their begin address (integer) will be stored

@@ -43,7 +43,7 @@ message("C compiler: ${CMAKE_C_COMPILER}")
 
 add_executable(projet1 demo/projet1-analex.c ${LEX} ${COMMON_SRC} ${UTILS})
 add_executable(projet2 demo/projet2-calculate.c ${UTILS} ${COMMON_SRC})
-add_executable(projet3 demo/projet3-symtable.c ${UTILS} ${COMMON_SRC} ${RUNTIME})
+add_executable(projet3 demo/projet3-symtable.c ${LEX} ${UTILS} ${COMMON_SRC} ${RUNTIME})
 add_executable(projet4 demo/projet4-lac.c ${LEX} ${UTILS} ${COMMON_SRC} ${RUNTIME})
 add_executable(lac lac.c ${LEX} ${UTILS} ${COMMON_SRC} ${RUNTIME})
 add_executable(color tools/color.c ${LEX} ${COMMON_SRC} ${UTILS})

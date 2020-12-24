@@ -188,6 +188,7 @@ int match_lac(char *psReadBuffer, char *pcReadBufferFin, lac_queue_t *pqueRes) {
     regfree(&regComment);
     regfree(&regString);
     regfree(&regIdentifier);
+    regfree(&regInteger);
 
     return TRUE;
 }

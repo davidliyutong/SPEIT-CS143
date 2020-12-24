@@ -93,27 +93,19 @@ typedef struct symtable_t {
 
     int iNumSymbols;
     int iTail; // The place of last defined symbol's NfA
+    int iCheckPoint; // The checkpoint
     u_symbol *Symbols;
 } symtable_t;
 
-//typedef union u_opcode {
-//    char c; // a character
-//    int i;  // a number
-//} u_opcode;
 
-/* The 2 table struc can be summariez to a <vector> type */
-
+/* The 2 table struc can be summariez to a <vector> type [!] */
 typedef struct vmtable_t {
     int iMaxLength; // The max length of the vm table
     int iTail; // The place of last OpCode
     int *OpCodes;
+    int iCheckPoint;
 } vmtable_t;
 
-typedef struct strtable_t {
-    int iMaxLength; // The max length of the vm table
-    int iTail; // The place of last char
-    char *cStr;
-} strtable_t;
 
 typedef struct vmenv_t {
     lac_stack_t StkData;        // Data stack
