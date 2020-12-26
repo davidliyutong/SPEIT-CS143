@@ -9,6 +9,6 @@
 
 int hash33(void *input, int iCnt, int iSize);
 
-int str_to_md5hash(unsigned char *input);
+unsigned int str_to_md5hash(unsigned char *input);
 
 #endif //LAC_HASH_H

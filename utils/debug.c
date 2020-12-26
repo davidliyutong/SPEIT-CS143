@@ -127,21 +127,19 @@ void disp_exp_tree(exp_btnode_t ExpTreeRoot) { // OK to pass the exptree's root 
     printf("\n-------------------------\n\n");
 }
 
-void disp_symtable(symtable_t *pSymTable) {
+void disp_symtable(hash_symtable_t *pSymTable) {
     /* This function displays the symbol table */
 
     printf("------ Symbol Table -----\n");
-    int idx = 1;
-    while (TRUE) {
-        int iLength = pSymTable->Symbols[idx].i;
-        for (int i = 0; i < iLength; i++) {
-            printf("%c", pSymTable->Symbols[++idx].c);
+    queue_node_t *pCursor;
+    hash_table_entry *pEntryTmp;
+    for (int i = 0; i < HASH_TABLE_LEN; i++) {
+        pCursor = pSymTable->Data[i].pFront;
+        while (pCursor != NULL) {
+            pEntryTmp = (hash_table_entry *) pCursor->pData;
+            printf("%s(%d) -> ", pEntryTmp->Key, *(int *) pEntryTmp->pData);
+            queue_next(&pCursor);
         }
-        fflush(stdout);
-        printf("(%d)", pSymTable->Symbols[idx + 1].i); // CFA
-        idx += 3;
-        if (idx >= pSymTable->iLength) break;
-        printf(" -> ");
     }
     printf("\n-------------------------\n\n");
 }

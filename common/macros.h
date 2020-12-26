@@ -45,8 +45,8 @@
 
 #define INIT_PROC_FUNC_NUM 26
 
-#define VERSION_INFO "\nThis is lac interactive mode Ver 2.5, by Yutong LI\n"
-#define VERSION_INFO_DEBUG "\nThis is lac interactive mode Ver 2.5, by Yutong LI [DEBUG] \n"
+#define VERSION_INFO "\nThis is lac interactive mode Ver 3.0, by Yutong LI\n"
+#define VERSION_INFO_DEBUG "\nThis is lac interactive mode Ver 3.0, by Yutong LI [DEBUG] \n"
 #define COLOR_NUMBER 34
 #define COLOR_WORD 33
 #define COLOR_STRING 32

@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "hash_table.h"
-#include "hash_symtable.h"
+#include "../common/hash_table.h"
+#include "../runtime/symtable.h"
 
 int main(int argc, char *argv[]) {
     hash_table_t HashTable;
@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     int value1 = 0;
     hash_table_query_res iRet;
     iRet = hash_table_add(&HashTable, key1, (void *) &value1, sizeof(value1));
-    hash_table_checkout(&HashTable, iRet.idx);
+    hash_table_checkout(&HashTable);
     iRet = hash_table_add(&HashTable, key1, (void *) &value1, sizeof(value1));
     printf("%d", iRet.idx);
 

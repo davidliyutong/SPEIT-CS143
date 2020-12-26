@@ -19,7 +19,7 @@ void disp_postfix_exp(lac_queue_t *quePostfixExp);
 
 void disp_exp_tree(exp_btnode_t ExpTreeRoot);
 
-void disp_symtable(symtable_t *pSymTable);
+void disp_symtable(hash_symtable_t *pSymTable);
 
 void disp_vmtable(vmtable_t *pVMTable);
 

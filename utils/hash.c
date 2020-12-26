@@ -14,11 +14,11 @@ int hash33(void *input, int iCnt, int iSize) {
 }
 
 
-int str_to_md5hash(unsigned char *input) {
+unsigned int str_to_md5hash(unsigned char *input) {
     /* Input is a string  */
     /* Output is a char[16] */
     unsigned char output[16];
-    int ans;
+    unsigned int ans;
 
     /* Do md5 first */
     MD5_CTX md5;

@@ -134,13 +134,12 @@ void interpret(char *psReadBuffer, lac_queue_t *pqueRes) {
 
     lexeme_t LexTmp;
     int iRet;
-    int iSymbolIdx; // The place to store symbol
     int iStrIdx; //  The place to store string
     int iOpType; // Type of Operation
     enum e_interpret_keyword InterpretType;
     int iCFA = VM_CFA_ERROR; //Code field address
+    hash_table_query_res SymbolQueryRes;
 
-    u_symbol SymbolInput[MAX_LEXEME_LEN];
 
 #ifdef DEBUG
     printf("\n[ Info ] %d lexemes to process\n", pqueRes->iLength);
@@ -149,9 +148,12 @@ void interpret(char *psReadBuffer, lac_queue_t *pqueRes) {
     while (queue_is_empty(pqueRes) != TRUE) {
         queue_pop_front(pqueRes, (void *) &LexTmp);
         /* Case it is a number */
+        char *pSymbolInputStr = psReadBuffer + LexTmp.iStart;
+        int iSymbolInputLength = LexTmp.iEnd - LexTmp.iStart;
+
         switch (LexTmp.type) {
             case NUMBER:
-                iRet = (int) strtol(psReadBuffer + LexTmp.iStart, NULL, 10);
+                iRet = (int) strtol(pSymbolInputStr, NULL, 10);
                 stack_push_vm(&g_Env.StkData, iRet);
                 break; // end of case NUMBER
             case WORD:
@@ -187,16 +189,15 @@ void interpret(char *psReadBuffer, lac_queue_t *pqueRes) {
                     case INTERPRET_DEFAULT:
                     default:
                         /* Translate the Lexeme to symbol */
-                        lex_to_symbol(psReadBuffer, LexTmp, SymbolInput);
-                        iSymbolIdx = symtable_search(&g_Env.SymTable, SymbolInput); // The place of the symbol in symtable.
-                        if (iSymbolIdx < 0) {
+                        SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, pSymbolInputStr, iSymbolInputLength); // The place of the symbol in symtable.
+                        if (SymbolQueryRes.idx < 0) {
                             /* Clear stacks if the symbol is not defined */
                             printf("\n[ Warning ] Symbol not defined: %.*s at %d\n", LexTmp.iEnd - LexTmp.iStart, psReadBuffer + LexTmp.iStart, LexTmp.iStart);
                             g_proc_env_reset();
                             return;
                         } else {
                             /* Verify the CFA is valid, (-1 for LAC or -2 for VM, not -3) */
-                            iCFA = symtable_get_cfa_by_idx(&g_Env.SymTable, iSymbolIdx);
+                            iCFA = hash_symtable_get_cfa(&g_Env.SymTable, pSymbolInputStr, iSymbolInputLength);
                             iOpType = g_Env.VMTable.OpCodes[iCFA];
                             switch (iOpType) {
                                 case VM_BASIC_FUNC_SYM:

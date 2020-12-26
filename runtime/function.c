@@ -9,8 +9,6 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
 
     /* The : is already popped, hear comes the function */
     lexeme_t LexTmp;
-    u_symbol SymbolInput[MAX_LEXEME_LEN];
-    int iSymbolIdx;
     int iStrIdx; // tmp value
     int iCFATmp; //tmp value
     int iCFACurr; // for the key word 'recursive' only
@@ -19,6 +17,8 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
     int iBreakStart;// tmp value, while break start from stack
     int iWhileStart;// tmp value, while loop start from stack
     int iRet;
+    hash_table_query_res SymbolQueryRes;
+
 
     lac_stack_t StkIf; // counter that records the number of if's, use for detecting syntax error
     lac_stack_t StkElse;  // counter that records the number of else's, use for detecting syntax error
@@ -40,28 +40,23 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
         g_proc_env_reset();
         return;
     }
+    char *pSymbolStr = psReadBuffer + LexTmp.iStart;
+    int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
 
-    iSymbolIdx = symtable_add(&g_Env.SymTable, psReadBuffer + LexTmp.iStart, LexTmp.iEnd - LexTmp.iStart);
-    if (iSymbolIdx == ERR_SYMBOL_OVERFLOW) {
+    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
+    iRet = hash_symtable_add(&g_Env.SymTable, pSymbolStr, iSymbolLength, g_Env.VMTable.iTail);
+    iCFACurr = g_Env.VMTable.iTail;
+    if (iRet == ERR_SYMBOL_OVERFLOW) {
         g_proc_env_reset();
         return;
-    } else if (iSymbolIdx == INFO_SYMBOL_NOT_FOUND) {
-        vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-        g_Env.SymTable.Symbols[g_Env.SymTable.iLength - 2].i = g_Env.VMTable.iTail;
-        iCFACurr = g_Env.VMTable.iTail;
+    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
-        printf("\n[ Debug ] Define function %.*s with CFA = %d\n", LexTmp.iEnd - LexTmp.iStart,
-               psReadBuffer + LexTmp.iStart, iCFACurr);
+        printf("\n[ Debug ] Define function %.*s with CFA = %d\n", LexTmp.iEnd - LexTmp.iStart, psReadBuffer + LexTmp.iStart, iCFACurr);
         fflush(stdout);
 #endif
     } else {
         printf("\n[ Info ] Semantic risk, Duplicate definition, previous definition will be replaced\n");
-        vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-        symtable_set_cfa_by_idx(&g_Env.SymTable, iSymbolIdx, g_Env.VMTable.iTail);
-        iCFACurr = symtable_get_cfa_by_idx(&g_Env.SymTable, iSymbolIdx);
-        /* [!] this can be done better */
     }
-
 
     /* The : and the name is popped */
     while (TRUE) {
@@ -71,6 +66,8 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
             return;
         }
         queue_pop_front(pqueRes, (void *) &LexTmp);
+        pSymbolStr = psReadBuffer + LexTmp.iStart;
+        iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
 
         /* In function variables, note they are in fact global variables*/
         if (strncmp(psReadBuffer + LexTmp.iStart, "variable", 8) == 0 &&
@@ -112,19 +109,14 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
 
         if (LexTmp.type == WORD) {
             /* A word is encountered */
-            iRet = lex_to_symbol(psReadBuffer, LexTmp, SymbolInput);
-            if (iRet != TRUE) {
-                g_proc_env_reset();
-                return;
-            }
-            iSymbolIdx = symtable_search(&g_Env.SymTable, SymbolInput);
-            if (iSymbolIdx < 0) {
+            SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, pSymbolStr, iSymbolLength);
+            if (SymbolQueryRes.idx < 0) {
                 printf("\n[ Warning ] Semantic error, Undefined symbol: %.*s\n", LexTmp.iEnd - LexTmp.iStart,
                        psReadBuffer + LexTmp.iStart);
                 g_proc_env_reset();
                 return;
             } else {
-                iCFATmp = symtable_get_cfa_by_idx(&g_Env.SymTable, iSymbolIdx);
+                iCFATmp = hash_symtable_get_cfa(&g_Env.SymTable, pSymbolStr, iSymbolLength);
                 /* if -> 26 else -> 28 then -> 30 */
                 switch (iCFATmp) {
                     case VM_CFA_WHILE: {
@@ -218,7 +210,7 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
             /* Add a lit. [!] this can be done by directly add the opcode lit */
             vmtable_add(&g_Env.VMTable, VM_CFA_LIT, OP_CODE_INST); // 20 is the CFA of (lit) [!]
             iImmVal = (int) strtol(psReadBuffer + LexTmp.iStart, NULL, 10);
-            vmtable_add(&g_Env.VMTable, iImmVal, OP_CODE_DATA);
+            vmtable_add(&g_Env.VMTable, iImmVal, OP_CODE_INST);
         } else if (LexTmp.type == STRING) {
             /* If a string is encountered */
             /* We store the string on the VMTable, so it must be skipped during execution */
@@ -236,7 +228,7 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
             /* The string is saved to iStrIdx, we save this value to vmtable*/
             /* Do the same as the situation of numbers (lit) + adddr */
             vmtable_add(&g_Env.VMTable, VM_CFA_LIT, OP_CODE_INST);
-            vmtable_add(&g_Env.VMTable, iStrIdx, OP_CODE_DATA);
+            vmtable_add(&g_Env.VMTable, iStrIdx, OP_CODE_INST);
         }
 
     }
@@ -254,7 +246,7 @@ void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
     stack_clear(&StkWhile);
     stack_clear(&StkBreak);
     /* Save the status of VMTable and StrTable */
-    symtable_checkout(&g_Env.SymTable);
+    hash_symtable_checkout(&g_Env.SymTable);
     vmtable_checkout(&g_Env.VMTable);
 }
 
@@ -263,7 +255,7 @@ void declare_function(char *psReadBuffer, lac_queue_t *pqueRes) {
 
     /* The defer is already popped, hear comes the function(declare) */
     lexeme_t LexTmp;
-    int iSymbolIdx;
+    int iRet;
 
     /* Get the name of symbol */
     queue_pop_front(pqueRes, (void *) &LexTmp);
@@ -277,14 +269,12 @@ void declare_function(char *psReadBuffer, lac_queue_t *pqueRes) {
     char *pSymbolStr = psReadBuffer + LexTmp.iStart;
     int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
 
-    iSymbolIdx = symtable_add(&g_Env.SymTable, pSymbolStr, iSymbolLength);
-    if (iSymbolIdx == ERR_SYMBOL_OVERFLOW) {
+    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
+    iRet = hash_symtable_add(&g_Env.SymTable, pSymbolStr, iSymbolLength, g_Env.VMTable.iTail);
+    if (iRet == ERR_SYMBOL_OVERFLOW) {
         g_proc_env_reset();
         return;
-    } else if (iSymbolIdx == INFO_SYMBOL_NOT_FOUND) {
-        vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-        symtable_set_cfa_by_name(&g_Env.SymTable, pSymbolStr, iSymbolLength, g_Env.VMTable.iTail);
-//        g_Env.SymTable.Symbols[g_Env.SymTable.iLength - 2].i = g_Env.VMTable.iTail;
+    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
         printf("\n[ Debug ] Declare function %.*s with CFA = %d\n", iSymbolLength,
                pSymbolStr, g_Env.VMTable.iTail);
@@ -301,7 +291,7 @@ void declare_function(char *psReadBuffer, lac_queue_t *pqueRes) {
     vmtable_add(&g_Env.VMTable, VM_CFA_ERROR, OP_CODE_INST);
     vmtable_add(&g_Env.VMTable, VM_CFA_FIN, OP_CODE_INST);
     /* Save the status of VMTable and StrTable */
-    symtable_checkout(&g_Env.SymTable);
+    hash_symtable_checkout(&g_Env.SymTable);
     vmtable_checkout(&g_Env.VMTable);
 }
 
@@ -314,11 +304,10 @@ void link_declaration(char *psReadBuffer, lac_queue_t *pqueRes) {
     lexeme_t LexSrc;
     lexeme_t LexIs;
 
-    u_symbol SymbolInput[MAX_LEXEME_LEN];
-    int iDstSymbolIdx;
-    int iSrcSymbolIdx;
     int iDstCFA;
     int iSrcCFA;
+    hash_table_query_res DstSymbolQueryRes;
+    hash_table_query_res SrcSymbolQueryRes;
 
     /* Get the name of declaration and function */
     queue_pop_front(pqueRes, (void *) &LexDst);
@@ -336,44 +325,34 @@ void link_declaration(char *psReadBuffer, lac_queue_t *pqueRes) {
     }
 
     /* Get CFA of Dst (the well-defined function) */
-    int iRet = lex_to_symbol(psReadBuffer, LexDst, SymbolInput);
-    if (iRet != TRUE) {
-        g_proc_env_reset();
-        return;
-    }
-    iDstSymbolIdx = symtable_search(&g_Env.SymTable, SymbolInput);
     char *pLexDstStr = psReadBuffer + LexDst.iStart;
     int iLexDstLength = LexDst.iEnd - LexDst.iStart;
+    DstSymbolQueryRes = hash_symtable_search(&g_Env.SymTable, pLexDstStr, iLexDstLength);
 
-    if (iDstSymbolIdx < 0) {
+    if (DstSymbolQueryRes.idx < 0) {
         printf("\n[ Warning ] Semantic error, link Dst (%.*s) is invalid\n", iLexDstLength,
                pLexDstStr);
         g_proc_env_reset();
         return;
         /* [!] this can be done better */
     } else {
-        iDstCFA = symtable_get_cfa_by_idx(&g_Env.SymTable, iDstSymbolIdx);
+        iDstCFA = hash_symtable_get_cfa(&g_Env.SymTable, pLexDstStr, iLexDstLength);
     }
 
     /* Get CFA of Src (the function declaration) */
-    iRet = lex_to_symbol(psReadBuffer, LexSrc, SymbolInput);
-    if (iRet != TRUE) {
-        g_proc_env_reset();
-        return;
-    }
-
-    iSrcSymbolIdx = symtable_search(&g_Env.SymTable, SymbolInput);
     char *pLexSrcStr = psReadBuffer + LexSrc.iStart;
     int iLexSrcLength = LexSrc.iEnd - LexSrc.iStart;
+    SrcSymbolQueryRes = hash_symtable_search(&g_Env.SymTable, pLexSrcStr, iLexSrcLength);
 
-    if (iSrcSymbolIdx < 0) {
+
+    if (SrcSymbolQueryRes.idx < 0) {
         printf("\n[ Warning ] Semantic error, link Src (%.*s) is invalid\n", iLexSrcLength,
                pLexSrcStr);
         g_proc_env_reset();
         return;
         /* [!] this can be done better */
     } else {
-        iSrcCFA = symtable_get_cfa_by_idx(&g_Env.SymTable, iSrcSymbolIdx);
+        iSrcCFA = hash_symtable_get_cfa(&g_Env.SymTable, pLexSrcStr, iLexSrcLength);
     }
 
     /* Link */
@@ -384,13 +363,13 @@ void link_declaration(char *psReadBuffer, lac_queue_t *pqueRes) {
     fflush(stdout);
 #endif
     /* Save the status of VMTable and StrTable */
-    symtable_checkout(&g_Env.SymTable);
+    hash_symtable_checkout(&g_Env.SymTable);
     vmtable_checkout(&g_Env.VMTable);
 }
 
 void declare_var(char *psReadBuffer, lac_queue_t *pqueRes) {
     lexeme_t LexTmp;
-    int iSymbolIdx;
+    int iRet;
 
     /* Get the name of symbol */
     queue_pop_front(pqueRes, (void *) &LexTmp);
@@ -404,23 +383,18 @@ void declare_var(char *psReadBuffer, lac_queue_t *pqueRes) {
     char *pSymboleStr = psReadBuffer + LexTmp.iStart;
     int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
 
-    iSymbolIdx = symtable_add(&g_Env.SymTable, pSymboleStr, iSymbolLength);
-    if (iSymbolIdx == ERR_SYMBOL_OVERFLOW) {
+    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
+    iRet = hash_symtable_add(&g_Env.SymTable, pSymboleStr, iSymbolLength, g_Env.VMTable.iTail);
+    if (iRet == ERR_SYMBOL_OVERFLOW) {
         g_proc_env_reset();
         return;
-    } else if (iSymbolIdx == INFO_SYMBOL_NOT_FOUND) {
-        vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-        symtable_set_cfa_by_name(&g_Env.SymTable, pSymboleStr, iSymbolLength, g_Env.VMTable.iTail);
-//        g_Env.SymTable.Symbols[g_Env.SymTable.iLength - 2].i = g_Env.VMTable.iTail;
+    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
         printf("\n[ Debug ] A variable %.*s is defined at VMTable[%d]\n", iSymbolLength,
                pSymboleStr, g_Env.VMTable.iTail);
 #endif
     } else {
         printf("\n[ Info ] Semantic risk of (var), Duplicate definition, previous definition will be replaced\n");
-        vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-        symtable_set_cfa_by_idx(&g_Env.SymTable, iSymbolIdx, g_Env.VMTable.iTail);
-        /* [!] this can be done better */
     }
 
     vmtable_add(&g_Env.VMTable, VM_CFA_LIT, OP_CODE_INST);
@@ -428,7 +402,7 @@ void declare_var(char *psReadBuffer, lac_queue_t *pqueRes) {
     vmtable_add(&g_Env.VMTable, VM_CFA_FIN, OP_CODE_INST);
     vmtable_add(&g_Env.VMTable, 0, OP_CODE_DATA); // pseudo value
     /* Save the status of VMTable and StrTable */
-    symtable_checkout(&g_Env.SymTable);
+    hash_symtable_checkout(&g_Env.SymTable);
     vmtable_checkout(&g_Env.VMTable);
 }
 
@@ -436,7 +410,7 @@ void declare_vec(char *psReadBuffer, lac_queue_t *pqueRes) {
     /* Declare a vector */
 
     lexeme_t LexTmp;
-    int iSymbolIdx;
+    int iRet;
 
     /* Get the name of symbol */
     queue_pop_front(pqueRes, (void *) &LexTmp);
@@ -448,26 +422,26 @@ void declare_vec(char *psReadBuffer, lac_queue_t *pqueRes) {
     }
 
     char *pSymbolStr = psReadBuffer + LexTmp.iStart;
-    int iSymboleLength = LexTmp.iEnd - LexTmp.iStart;
+    int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
 
-    iSymbolIdx = symtable_add(&g_Env.SymTable, pSymbolStr, iSymboleLength);
-    if (iSymbolIdx == ERR_SYMBOL_OVERFLOW) {
+    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
+    iRet = hash_symtable_add(&g_Env.SymTable, pSymbolStr, iSymbolLength, g_Env.VMTable.iTail);
+    if (iRet == ERR_SYMBOL_OVERFLOW) {
         g_proc_env_reset();
         return;
-    } else if (iSymbolIdx == INFO_SYMBOL_NOT_FOUND) {
-        vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-        symtable_set_cfa_by_name(&g_Env.SymTable, pSymbolStr, iSymboleLength, g_Env.VMTable.iTail);
-//        g_Env.SymTable.Symbols[g_Env.SymTable.iLength - 2].i = g_Env.VMTable.iTail;
-
+    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
+#ifdef DEBUG
+        printf("\n[ Debug ] A vector %.*s is defined at VMTable[%d]\n", iSymbolLength,
+               pSymbolStr, g_Env.VMTable.iTail);
+#endif
     } else {
         printf("\n[ Info ] Semantic risk of (vec), Duplicate definition, previous definition will be replaced\n");
-        vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-        symtable_set_cfa_by_idx(&g_Env.SymTable, iSymbolIdx, g_Env.VMTable.iTail);
-        /* [!] this can be done better */
     }
 
     /* Get the length of vector */
     queue_pop_front(pqueRes, (void *) &LexTmp);
+    pSymbolStr = psReadBuffer + LexTmp.iStart;
+    iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
 
     int iVecLen = (int) strtol(pSymbolStr, NULL, 10);
     if (iVecLen <= 0) {
@@ -477,7 +451,7 @@ void declare_vec(char *psReadBuffer, lac_queue_t *pqueRes) {
         return;
     }
 #ifdef DEBUG
-    printf("\n[ Debug ] A vector %.*s of length %d is defined at VMTable[%d]\n", iSymboleLength,
+    printf("\n[ Debug ] A vector %.*s of length %d is defined at VMTable[%d]\n", iSymbolLength,
            pSymbolStr, iVecLen, g_Env.VMTable.iTail);
 #endif
 
@@ -492,6 +466,6 @@ void declare_vec(char *psReadBuffer, lac_queue_t *pqueRes) {
     vmtable_add(&g_Env.VMTable, VM_CFA_FIN, OP_CODE_INST);
 
     /* Save the status of VMTable and StrTable */
-    symtable_checkout(&g_Env.SymTable);
+    hash_symtable_checkout(&g_Env.SymTable);
     vmtable_checkout(&g_Env.VMTable);
 }

@@ -4,12 +4,12 @@
 
 #include "hash_table.h"
 
-inline int hash_table_compute_hash(unsigned char *input) {
-    int iHashValue = str_to_md5hash(input);
+inline unsigned int hash_table_compute_hash(unsigned char *input) {
+    unsigned int iHashValue = str_to_md5hash(input);
     return iHashValue % HASH_TABLE_LEN;
 }
 
-hash_table_entry *hash_table_gen_entry(char *sKey, void *pValue, int iSize) {
+hash_table_entry *hash_table_gen_entry(const char *sKey, void *pValue, int iSize) {
     /* pValue that have dynamically located value should be treated carefully */
     hash_table_entry *pEntry = malloc(sizeof(hash_table_entry));
 
@@ -51,7 +51,6 @@ int hash_table_init(hash_table_t *pHashTable) {
 }
 
 int hash_table_revert(hash_table_t *pHashTable) {
-    queue_node_t pNode;
     hash_table_entry OldEntryTmp;
 
     for (int idx = 0; idx < HASH_TABLE_LEN; idx++) {
@@ -64,12 +63,13 @@ int hash_table_revert(hash_table_t *pHashTable) {
     return TRUE;
 }
 
-void hash_table_checkout(hash_table_t *pHashTable) {
+int hash_table_checkout(hash_table_t *pHashTable) {
     pHashTable->iNumEntry = 0;
     for (int idx = 0; idx < HASH_TABLE_LEN; idx++) {
         pHashTable->CheckPoints[idx] = pHashTable->Data[idx].iLength;
         pHashTable->iNumEntry += pHashTable->CheckPoints[idx];
     }
+    return TRUE;
 }
 
 int hash_table_entry_is_empty(hash_table_t *pHashTable, int iHashTableIdx) {
@@ -79,18 +79,18 @@ int hash_table_entry_is_empty(hash_table_t *pHashTable, int iHashTableIdx) {
 hash_table_query_res hash_table_query(hash_table_t *pHashTable, char *sKey) {
     hash_table_query_res res = {-1, NULL}; // Query result
 
-    res.idx = hash_table_compute_hash((unsigned char *) sKey); // get the hash table index from key
+    res.idx = (int) hash_table_compute_hash((unsigned char *) sKey); // get the hash table index from key
     if (hash_table_entry_is_empty(pHashTable, res.idx)) { // the hash table is empty
         return res;
     } else {
         queue_node_t *pNode = pHashTable->Data[res.idx].pFront;
-        do {
+        while (pNode != NULL) {
             if (strncmp(((hash_table_entry *) (pNode->pData))->Key, sKey, MAX_KEY_LEN) == 0) {
                 res.pNode = pNode;
                 return res;
             }
-            queue_next(pNode); // move to the next node
-        } while (pNode != NULL);
+            queue_next(&pNode); // move to the next node
+        }
         return res;
     }
 }

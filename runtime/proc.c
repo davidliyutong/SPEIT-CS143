@@ -359,7 +359,7 @@ void proc_func_jr() {
 void g_proc_env_init() {
     /* This function init the runtime environment */
     vmtable_init(&g_Env.VMTable);
-    symtable_init(&g_Env.SymTable);
+    hash_symtable_init(&g_Env.SymTable);
     stack_init(&g_Env.StkData);
     stack_init(&g_Env.StkReturn);
     g_Env.bInited = TRUE;
@@ -369,7 +369,7 @@ void g_proc_env_reset() {
     /* This function clear the data stack and return stack */
     stack_clear(&g_Env.StkData);
     stack_clear(&g_Env.StkReturn);
-    symtable_revert(&g_Env.SymTable);
+    hash_symtable_revert(&g_Env.SymTable);
     vmtable_revert(&g_Env.VMTable);
     g_Env.bInited = TRUE;
 }
@@ -383,23 +383,19 @@ void g_proc_compile() {
     if (g_Env.bInited != TRUE) g_proc_env_init();
 
     for (int idx = 0; idx < INIT_PROC_FUNC_NUM; ++idx) {
-        /* modify the symbol table */
-        symtable_add(&g_Env.SymTable, g_proc_basic_func_name[idx], (int) strlen(g_proc_basic_func_name[idx]));
-        /* iLength -2 is the current  symbol's CFA (NOT VALID) */
 
         /* modify the vm table */
         vmtable_add(&g_Env.VMTable, g_proc_basic_func_type[idx], OP_CODE_INST);
         vmtable_add(&g_Env.VMTable, idx, OP_CODE_INST);
-
-        /* modify the symbol table CFA */
-        symtable_set_cfa_by_name(&g_Env.SymTable, g_proc_basic_func_name[idx], (int) strlen(g_proc_basic_func_name[idx]), g_Env.VMTable.iTail - 1);
-//        g_Env.SymTable.Symbols[g_Env.SymTable.iLength - 2].i = g_Env.VMTable.iTail - 1;
+        /* modify the symbol table */
+        hash_symtable_add(&g_Env.SymTable, g_proc_basic_func_name[idx], (int) strlen(g_proc_basic_func_name[idx]), g_Env.VMTable.iTail - 1);
+        /* iLength -2 is the current  symbol's CFA (NOT VALID) */
 
     }
     g_Env.bCompiled = TRUE;
 
     /* Save the status of VMTable and StrTable */
-    symtable_checkout(&g_Env.SymTable);
+    hash_symtable_checkout(&g_Env.SymTable);
     vmtable_checkout(&g_Env.VMTable);
 }
 

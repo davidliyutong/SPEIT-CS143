@@ -8,18 +8,17 @@
 
 int main() {
 
-    symtable_t SymTable;
-    symtable_init(&SymTable);
+    hash_symtable_t SymTable;
+    hash_symtable_init(&SymTable);
     char symbols[4][6] = {"+", "swap", "swap", "swapp"};
     int iRet;
     for (int i = 0; i < 4; i++) {
-        iRet = symtable_add(&SymTable, symbols[i], (int) strlen(symbols[i]));
+        iRet = hash_symtable_add(&SymTable, symbols[i], (int) strlen(symbols[i]), 0);
         if (iRet > 0) {
             printf("\n[ Warning ] Duplicated symbol found: %s\n", symbols[i]);
         }
     }
-    symtable_checkout(&SymTable);
+    hash_symtable_checkout(&SymTable);
     disp_symtable(&SymTable);
-
     return 0;
 }

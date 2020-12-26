@@ -13,7 +13,6 @@
 #include "../runtime/symtable.h"
 #include "../runtime/vmtable.h"
 #include "../utils/calculate.h"
-#include "../utils/convert.h"
 #include "env.h"
 #include "interpret.h"
 #include "proc.h"

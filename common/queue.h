@@ -51,8 +51,8 @@ void queue_destroy(lac_queue_t *pQueue);
 
 void queue_clear(lac_queue_t *pQueue);
 
-void queue_next(queue_node_t *pNode);
+void queue_next(queue_node_t **ppNode);
 
-void queue_prev(queue_node_t *pNode);
+void queue_prev(queue_node_t **ppNode);
 
 #endif

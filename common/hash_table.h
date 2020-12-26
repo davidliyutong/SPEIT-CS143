@@ -5,12 +5,14 @@
 #ifndef LAC_HASH_TABLE_H
 #define LAC_HASH_TABLE_H
 
-#define MAX_KEY_LEN MAX_LEXEME_LEN
+
 #define  HASH_TABLE_LEN 8
 
-#include "../common/queue.h"
-#include "../common/macros.h"
-#include "hash.h"
+#include "queue.h"
+#include "macros.h"
+#include "../utils/hash.h"
+
+#define MAX_KEY_LEN MAX_LEXEME_LEN
 
 typedef struct hash_table_t {
     int iNumEntry;
@@ -28,9 +30,9 @@ typedef struct hash_table_query_res {
     queue_node_t *pNode;
 } hash_table_query_res;
 
-int hash_table_compute_hash(unsigned char *input);
+unsigned int hash_table_compute_hash(unsigned char *input);
 
-hash_table_entry *hash_table_gen_entry(char *sKey, void *pValue, int iSize);
+hash_table_entry *hash_table_gen_entry(const char *sKey, void *pValue, int iSize);
 
 int hash_table_reset(hash_table_t *pHashTable);
 
@@ -38,7 +40,7 @@ int hash_table_init(hash_table_t *pHashTable);
 
 int hash_table_revert(hash_table_t *pHashTable);
 
-void hash_table_checkout(hash_table_t *pHashTable =);
+int hash_table_checkout(hash_table_t *pHashTable);
 
 int hash_table_entry_is_empty(hash_table_t *pHashTable, int iHashTableIdx);
 
