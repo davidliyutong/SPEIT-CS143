@@ -32,7 +32,7 @@ int input_to_buffer(FILE *pInputFile, char **ppsReadBuffer) {
         (*ppsReadBuffer)[0] = '\n'; /* Manually add a return character*/
         iReadCnt = (int) fread(*ppsReadBuffer + 1, 1, (size_t) lSize, pInputFile);
         if (iReadCnt != lSize) {
-            printf("\n[ Error ] IO error\n");
+            printf("\n[ Error ] IO error, file not completely read\n");
             free(ppsReadBuffer);
             exit(ERR_IO);
         }
@@ -42,7 +42,7 @@ int input_to_buffer(FILE *pInputFile, char **ppsReadBuffer) {
         fclose(pInputFile);
         return iReadCnt + 1;
     } else {
-        printf("\n[ Error ] Memory error\n");
+        printf("\n[ Error ] IO error, file failed to open\n");
         exit(ERR_IO); // The file is not opened
     }
 }

@@ -16,6 +16,17 @@
 #include "../utils/debug.h"
 #include "../utils/io.h"
 
+enum calculator_stat {
+    /* When the calculator is running, there are possible states */
+    CALC_STAT_BEGIN,
+    CALC_STAT_NUMBER,
+    CALC_STAT_OP,
+    CALC_STAT_OP_PAR_LEFT,
+    CALC_STAT_OP_PAR_RIGHT,
+    CALC_STAT_FIN,
+    CALC_STAT_ERR
+};
+
 exp_btnode_t *gen_exp_BTNode();
 
 int calculate_2_op_int(int iOperand1, int iOperand2, int *ans, char cOperator);

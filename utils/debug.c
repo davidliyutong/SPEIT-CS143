@@ -172,7 +172,7 @@ void visualize(char *psReadBuffer, lac_queue_t *pqueRes) {
 
         /* print spaces */
         printf("%.*s", res.iStart - printIdx, psReadBuffer + printIdx);
-        printIdx += res.iStart - printIdx;
+//        printIdx += res.iStart - printIdx;
 
         /* print item */
         switch (res.type) {

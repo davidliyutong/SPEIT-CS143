@@ -5,6 +5,23 @@
 
 #include "symtable.h"
 
+int str_to_symbol(const char *pStr, int iLength, u_symbol *pSymbol);
+
+inline int str_to_symbol(const char *pStr, int iLength, u_symbol *pSymbol) {
+    /* This function converts a lexem to a symbol */
+    /* Src: Lex, Dst pSymbol */
+
+    if (iLength >= MAX_LEXEME_LEN - 1) {
+        printf("\n [ Warning ] Syntax error, string %.*s too long\n", iLength, pStr);
+        return ERR_SYNTAX;
+    }
+    memset(pSymbol, 0, sizeof(union u_symbol) * MAX_LEXEME_LEN);
+
+    pSymbol[0].i = iLength;
+    for (int i = 1; i <= iLength; ++i) pSymbol[i].c = pStr[i - 1];
+    return TRUE;
+}
+
 int symtable_init(symtable_t *pSymTable) {
     pSymTable->iMaxLength = INIT_SYM_TABLE_LEN;
     pSymTable->iLength = 0;
@@ -22,22 +39,24 @@ int symtable_init(symtable_t *pSymTable) {
     }
 }
 
-int symtable_destroy(symtable_t *pSymTable) {
-    pSymTable->iMaxLength = -1; // A invalid number
-    pSymTable->iLength = 0;
-    pSymTable->iTail = 0;
-    pSymTable->iNumSymbols = 0;
-    free(pSymTable->Symbols);
-    pSymTable->Symbols = NULL;
-    return TRUE;
-}
+//int symtable_destroy(symtable_t *pSymTable) {
+//    pSymTable->iMaxLength = -1; // A invalid number
+//    pSymTable->iLength = 0;
+//    pSymTable->iTail = 0;
+//    pSymTable->iNumSymbols = 0;
+//    free(pSymTable->Symbols);
+//    pSymTable->Symbols = NULL;
+//    return TRUE;
+//}
 
-int symtable_clear(symtable_t *pSymTable) {
-    symtable_destroy(pSymTable);
-    return symtable_init(pSymTable);
-}
+//int symtable_clear(symtable_t *pSymTable) {
+//    symtable_destroy(pSymTable);
+//    return symtable_init(pSymTable);
+//}
 
-int symtable_cmp(u_symbol *pSymTableLoc, u_symbol *pInput) {
+int symtable_cmp(u_symbol *pSymTableLoc, u_symbol *pInput);
+
+inline int symtable_cmp(u_symbol *pSymTableLoc, u_symbol *pInput) {
     /* Compare the symbol with an extraction of symbol */
     /* The pInput points to a new symbol under the format: [l|{NAME}] */
     int iLength = pInput[0].i;
@@ -70,7 +89,9 @@ int symtable_search(symtable_t *pTable, u_symbol *pInput) {
     }
 }
 
-int symtable_expand(symtable_t *pSymTable) {
+int symtable_expand(symtable_t *pSymTable);
+
+inline int symtable_expand(symtable_t *pSymTable) {
     /* If the pSymTable is not enough, then it need to be expanded */
     pSymTable->Symbols = (u_symbol *) realloc(pSymTable->Symbols,
                                               sizeof(u_symbol) * (pSymTable->iMaxLength + INIT_VM_TABLE_LEN));
@@ -91,13 +112,8 @@ int symtable_checkout(symtable_t *pSymTable) {
 int symtable_revert(symtable_t *pSymTable) {
     /* Revert to previous checkpoint*/
     while (pSymTable->iLength > pSymTable->iCheckPoint) {
-        symtable_del(pSymTable);
+        pSymTable->Symbols[pSymTable->iTail--].i = 0;
     }
-    return TRUE;
-}
-
-int symtable_del(symtable_t *pSymTable) {
-    pSymTable->Symbols[pSymTable->iTail--].i = 0;
     return TRUE;
 }
 
@@ -130,7 +146,7 @@ int symtable_add(symtable_t *pSymTable, const char *pSymbolStr, int iLength) {
     return INFO_SYMBOL_NOT_FOUND; // (-1)
 }
 
-int symtable_get_cfa(symtable_t *pSymTable, int iSymbolIdx) {
+int symtable_get_cfa_by_idx(symtable_t *pSymTable, int iSymbolIdx) {
     /* This function returns the CFA value of a symbol in the symtable */
     /* The index of the symbol should be provided (l) */
     int iOffset = pSymTable->Symbols[iSymbolIdx].i;
@@ -139,10 +155,28 @@ int symtable_get_cfa(symtable_t *pSymTable, int iSymbolIdx) {
 
 }
 
-int symtable_set_cfa(symtable_t *pSymTable, int iSymbolIdx, int iCFAVal) {
+int symtable_set_cfa_by_idx(symtable_t *pSymTable, int iSymbolIdx, int iCFAVal) {
     /* This function set the CFA value of a symbol in the symtable */
     /* The index of the symbol should be provided (l) */
     int iOffset = pSymTable->Symbols[iSymbolIdx].i;
     pSymTable->Symbols[iSymbolIdx + iOffset + 1].i = iCFAVal;
     return TRUE;
+}
+
+int symtable_set_cfa_by_name(symtable_t *pSymTable, char *pSymbolStr, int iLength, int iCFAVal) {
+    int iSymbolIdx;
+    u_symbol SymbolInput[MAX_LEXEME_LEN];
+    int iRet = str_to_symbol(pSymbolStr, iLength, SymbolInput);
+    if (iRet != TRUE) {
+        printf("\n[ Warning ] Symbol %.*s is too long \n", iLength, pSymbolStr);
+        return ERR_SYMBOL_OVERFLOW; // (-2)
+    }
+
+    iSymbolIdx = symtable_search(pSymTable, SymbolInput);
+    if (iRet >= 0) { // Duplicate symbol;
+        symtable_set_cfa_by_idx(pSymTable, iSymbolIdx, iCFAVal);
+        return TRUE;
+    } else {
+        return INFO_SYMBOL_NOT_FOUND;
+    }
 }

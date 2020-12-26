@@ -8,10 +8,11 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../common/types.h"
+
+#include "../lex/analex.h"
+#include "../runtime/symtable.h"
+#include "../runtime/interpret.h"
 
 int lex_to_symbol(const char *psReadBuffer, lexeme_t Lex, u_symbol *pSymbol);
-
-int str_to_symbol(const char *pStr, int iLength, u_symbol *pSymbol);
 
 #endif //LAC_CONVERT_H

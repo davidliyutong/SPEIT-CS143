@@ -8,7 +8,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../common/stack.h"
-#include "../common/types.h"
+#include "symtable.h"
+#include "vmtable.h"
+
+typedef struct vmenv_t {
+    lac_stack_t StkData;        // Data stack
+    lac_stack_t StkReturn;      // Return stack
+    symtable_t SymTable;    // Table of symbols
+    vmtable_t VMTable;      // VM table
+    bool bCompiled;         // Flag
+    bool bInited;           // Flag
+} vmenv_t;
 
 extern vmenv_t g_Env;
 

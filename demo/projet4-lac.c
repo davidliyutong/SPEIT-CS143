@@ -8,7 +8,6 @@
 #include "../runtime/interpret.h"
 
 int main() {
-    extern vmenv_t g_Env;
     g_proc_env_init();
     g_proc_compile();
     disp_vmtable(&g_Env.VMTable);

@@ -5,8 +5,6 @@
 
 #ifndef LAC_MACROS_H
 #define LAC_MACROS_H
-#define TRUE 1
-#define FALSE 0
 
 #define VM_BASIC_FUNC_SYM (-1)
 #define VM_LAC_FUNC_SYM (-2)
@@ -37,10 +35,9 @@
 #define ERR_SYMBOL_OVERFLOW (-2)
 #define INFO_SYMBOL_NOT_FOUND (-1)
 
-#define MAX_LEXEME_LEN 0x80
 #define MAX_MATCH_NUM 0xA
 #define MAX_NUMBER_LEN 0x10
-#define MAX_WORD_LEN 0x20
+#define MAX_LEXEME_LEN 0x40
 #define MAX_INPUT_LEN 256
 
 #define INIT_VM_TABLE_LEN 0x400
@@ -48,8 +45,8 @@
 
 #define INIT_PROC_FUNC_NUM 26
 
-#define VERSION_INFO "\nThis is lac interactive mode Ver 2.0, by Yutong LI\n"
-#define VERSION_INFO_DEBUG "\nThis is lac interactive mode Ver 2.0, by Yutong LI [DEBUG] \n"
+#define VERSION_INFO "\nThis is lac interactive mode Ver 2.5, by Yutong LI\n"
+#define VERSION_INFO_DEBUG "\nThis is lac interactive mode Ver 2.5, by Yutong LI [DEBUG] \n"
 #define COLOR_NUMBER 34
 #define COLOR_WORD 33
 #define COLOR_STRING 32

@@ -63,7 +63,7 @@ int main(int argc, const char *argv[]) {
                 match_lac(sInputBuffer, sInputBuffer + iReadCnt, &queRes);
                 interpret(sInputBuffer, &queRes);
 
-                /* After interpret, clear queue and input buffer */
+                /* After interpret, clear queue and input Buffer */
                 queue_clear(&queRes);
                 memset(sInputBuffer, 0, sizeof(char) * MAX_INPUT_LEN);
                 sInputBuffer[0] = '\n'; // Manually add a return character to the line start

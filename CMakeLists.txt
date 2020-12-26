@@ -28,6 +28,10 @@ file(GLOB RUNTIME
         "runtime/*.h"
         "runtime/*.c")
 
+file(GLOB DEV
+        "dev/*.h"
+        "dev/*.c")
+
 message("C compiler: ${CMAKE_C_COMPILER}")
 
 # Test units
@@ -47,3 +51,5 @@ add_executable(projet3 demo/projet3-symtable.c ${LEX} ${UTILS} ${COMMON_SRC} ${R
 add_executable(projet4 demo/projet4-lac.c ${LEX} ${UTILS} ${COMMON_SRC} ${RUNTIME})
 add_executable(lac lac.c ${LEX} ${UTILS} ${COMMON_SRC} ${RUNTIME})
 add_executable(color tools/color.c ${LEX} ${COMMON_SRC} ${UTILS})
+
+add_executable(dev_hash ${DEV} ${LEX} ${UTILS} ${COMMON_SRC})

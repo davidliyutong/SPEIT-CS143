@@ -11,9 +11,9 @@ int main() {
     symtable_t SymTable;
     symtable_init(&SymTable);
     char symbols[4][6] = {"+", "swap", "swap", "swapp"};
-    int iRet = 0;
+    int iRet;
     for (int i = 0; i < 4; i++) {
-        iRet = symtable_add(&SymTable, symbols[i], strlen(symbols[i]));
+        iRet = symtable_add(&SymTable, symbols[i], (int) strlen(symbols[i]));
         if (iRet > 0) {
             printf("\n[ Warning ] Duplicated symbol found: %s\n", symbols[i]);
         }

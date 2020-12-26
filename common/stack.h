@@ -10,6 +10,17 @@
 #include "macros.h"
 #include "types.h"
 
+typedef struct stack_node_t {
+    void *pData;
+    int iNumBytes;
+    struct stack_node_t *pPrev;
+} stack_node_t;
+
+typedef struct lac_stack_t {
+    int iLength;
+    struct stack_node_t *pTop;
+} lac_stack_t;
+
 lac_stack_t *stack_create();
 
 void stack_init(lac_stack_t *pStack);

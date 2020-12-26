@@ -35,32 +35,32 @@
 
 */
 
-void (*g_proc_basic_func[INIT_PROC_FUNC_NUM])() = {proc_func_dup,
-                                                   proc_func_drop,
-                                                   proc_func_swap,
-                                                   proc_func_dot,
-                                                   proc_func_count,
-                                                   proc_func_type,
-                                                   proc_func_equal,
-                                                   proc_func_gt,
-                                                   proc_func_lt,
-                                                   proc_func_mult,
-                                                   proc_func_plus,
-                                                   proc_func_minus,
-                                                   proc_func_div,
-                                                   proc_func_lit,
-                                                   proc_func_fin,
-                                                   proc_func_calculate,
-                                                   proc_func_if,
-                                                   proc_func_else,
-                                                   proc_func_then,
-                                                   proc_func_recurse,
-                                                   proc_func_at,
-                                                   proc_func_exclaim,
-                                                   proc_func_while,
-                                                   proc_func_loop,
-                                                   proc_func_break,
-                                                   proc_func_jr};
+basic g_proc_basic_func[INIT_PROC_FUNC_NUM] = {proc_func_dup,
+                                               proc_func_drop,
+                                               proc_func_swap,
+                                               proc_func_dot,
+                                               proc_func_count,
+                                               proc_func_type,
+                                               proc_func_equal,
+                                               proc_func_gt,
+                                               proc_func_lt,
+                                               proc_func_mult,
+                                               proc_func_plus,
+                                               proc_func_minus,
+                                               proc_func_div,
+                                               proc_func_lit,
+                                               proc_func_fin,
+                                               proc_func_calculate,
+                                               proc_func_if,
+                                               proc_func_else,
+                                               proc_func_then,
+                                               proc_func_recurse,
+                                               proc_func_at,
+                                               proc_func_exclaim,
+                                               proc_func_while,
+                                               proc_func_loop,
+                                               proc_func_break,
+                                               proc_func_jr};
 
 char g_proc_basic_func_name[INIT_PROC_FUNC_NUM][10] = {"dup",
                                                        "drop",
@@ -242,7 +242,7 @@ void proc_func_fin() {
 void proc_func_calculate() {
     int iAddr = stack_pop_vm(&g_Env.StkData);
     int iLength = vmtable_strlen(&g_Env.VMTable, iAddr);
-    char *psCalcString = calloc(iLength + 1, sizeof(char));
+    char *psCalcString = calloc((size_t) iLength + 1, sizeof(char));
     for (int idx = 0; idx < iLength; idx++) {
         psCalcString[idx] = (char) g_Env.VMTable.OpCodes[iAddr + idx];
     }
@@ -293,22 +293,37 @@ void proc_func_recurse() {
 void proc_func_at() {
     /* read variable */
     int iAddr = stack_pop_vm(&g_Env.StkData);
-    int ans = g_Env.VMTable.OpCodes[iAddr];
-    stack_push_vm(&g_Env.StkData, ans);
+    int ans;
+
+    if (g_Env.VMTable.OpCodeTypes[iAddr] == OP_CODE_DATA) {
+        ans = g_Env.VMTable.OpCodes[iAddr];
+        stack_push_vm(&g_Env.StkData, ans);
 #ifdef DEBUG
-    printf("\n[ Debug ] A value %d is pushed into data stack\n", ans);
-    fflush(stdout);
+        printf("\n[ Debug ] A value %d is pushed into data stack\n", ans);
+        fflush(stdout);
 #endif
+    } else {
+        /* This place of memory is not data */
+        printf("\n[ Warning ] Illegal lac memory access");
+        g_proc_env_reset();
+    }
 }
 
 void proc_func_exclaim() {
     int iAddr = stack_pop_vm(&g_Env.StkData);
     int iVal = stack_pop_vm(&g_Env.StkData);
-    g_Env.VMTable.OpCodes[iAddr] = iVal;
+    if (g_Env.VMTable.OpCodeTypes[iAddr] == OP_CODE_DATA) {
+        /* This place of memory is writable */
+        g_Env.VMTable.OpCodes[iAddr] = iVal;
 #ifdef DEBUG
-    printf("\n[ Debug ] A value %d is set to VMTable[%d]\n", iVal, iAddr);
-    fflush(stdout);
+        printf("\n[ Debug ] A value %d is set to VMTable[%d]\n", iVal, iAddr);
+        fflush(stdout);
 #endif
+    } else {
+        /* This place of memory is not writable */
+        printf("\n[ Warning ] Illegal lac memory access");
+        g_proc_env_reset();
+    }
 }
 
 void proc_func_while() {
@@ -345,7 +360,6 @@ void g_proc_env_init() {
     /* This function init the runtime environment */
     vmtable_init(&g_Env.VMTable);
     symtable_init(&g_Env.SymTable);
-//    strtable_init(&g_Env.StrTable);
     stack_init(&g_Env.StkData);
     stack_init(&g_Env.StkReturn);
     g_Env.bInited = TRUE;
@@ -360,35 +374,30 @@ void g_proc_env_reset() {
     g_Env.bInited = TRUE;
 }
 
-//void g_proc_env_clear() {
-//    /* This function clear the data stacks and tables*/
-//    stack_clear(&g_Env.StkData);
-//    stack_clear(&g_Env.StkReturn);
-//    symtable_clear(&g_Env.SymTable);
-//    vmtable_clear(&g_Env.VMTable);
-//    strtable_clear(&g_Env.StrTable);
-//    g_Env.bInited = TRUE;
-//}
 
 void g_proc_compile() {
     /* The basic functions of processor need to be compiled in advance */
     /* The two tables (symtable and vmtable) are assumed as inited */
 
     /* Add the basic functions to SymTable and VMTable*/
+    if (g_Env.bInited != TRUE) g_proc_env_init();
+
     for (int idx = 0; idx < INIT_PROC_FUNC_NUM; ++idx) {
         /* modify the symbol table */
         symtable_add(&g_Env.SymTable, g_proc_basic_func_name[idx], (int) strlen(g_proc_basic_func_name[idx]));
         /* iLength -2 is the current  symbol's CFA (NOT VALID) */
 
         /* modify the vm table */
-        vmtable_add(&g_Env.VMTable, g_proc_basic_func_type[idx]);
-        vmtable_add(&g_Env.VMTable, idx);
+        vmtable_add(&g_Env.VMTable, g_proc_basic_func_type[idx], OP_CODE_INST);
+        vmtable_add(&g_Env.VMTable, idx, OP_CODE_INST);
 
         /* modify the symbol table CFA */
-        g_Env.SymTable.Symbols[g_Env.SymTable.iLength - 2].i = g_Env.VMTable.iTail - 1;
+        symtable_set_cfa_by_name(&g_Env.SymTable, g_proc_basic_func_name[idx], (int) strlen(g_proc_basic_func_name[idx]), g_Env.VMTable.iTail - 1);
+//        g_Env.SymTable.Symbols[g_Env.SymTable.iLength - 2].i = g_Env.VMTable.iTail - 1;
 
     }
     g_Env.bCompiled = TRUE;
+
     /* Save the status of VMTable and StrTable */
     symtable_checkout(&g_Env.SymTable);
     vmtable_checkout(&g_Env.VMTable);

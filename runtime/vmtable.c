@@ -4,18 +4,23 @@
 
 #include "vmtable.h"
 
+
 int vmtable_init(vmtable_t *pVMTable) {
     /* Init a vmtable defined outside of function */
 
     pVMTable->iMaxLength = INIT_VM_TABLE_LEN;
     pVMTable->iTail = -1;
     pVMTable->OpCodes = malloc(sizeof(int) * pVMTable->iMaxLength);
-    memset(pVMTable->OpCodes, VM_CTRL_FUNC_SYM, sizeof(int) * pVMTable->iMaxLength);
+    pVMTable->OpCodeTypes = malloc(sizeof(e_opcode_type) * pVMTable->iMaxLength);
 
-    if (pVMTable->OpCodes == NULL) {
+    if (pVMTable->OpCodes == NULL || pVMTable->OpCodeTypes == NULL) {
         printf("\n[ Error ] Out of memory\n");
         exit(ERR_MEM);
     }
+
+    memset(pVMTable->OpCodes, VM_CTRL_FUNC_SYM, sizeof(int) * pVMTable->iMaxLength);
+    memset(pVMTable->OpCodeTypes, OP_CODE_NULL, sizeof(int) * pVMTable->iMaxLength);
+
 
     return TRUE;
 }
@@ -24,27 +29,33 @@ int vmtable_expand(vmtable_t *pVMTable) {
     /* If the pVMTable is not enough, then it need to be expanded */
 
     pVMTable->OpCodes = (int *) realloc(pVMTable->OpCodes, sizeof(int) * (pVMTable->iMaxLength + INIT_VM_TABLE_LEN));
-    if (pVMTable->OpCodes == NULL) {
+    pVMTable->OpCodeTypes = (e_opcode_type *) realloc(pVMTable->OpCodeTypes, sizeof(e_opcode_type) * (pVMTable->iMaxLength + INIT_VM_TABLE_LEN));
+
+    if (pVMTable->OpCodes == NULL || pVMTable->OpCodeTypes == NULL) {
         printf("\n[ Error ] Out of memory\n");
         exit(ERR_MEM);
     }
+
     pVMTable->iMaxLength += INIT_VM_TABLE_LEN;
     return TRUE;
 }
 
-inline int vmtable_add(vmtable_t *pVMTable, int iOpCode) {
+inline int vmtable_add(vmtable_t *pVMTable, int iOpCode, e_opcode_type Type) {
     /* Add a OpCode to the vmtable */
 
     if (pVMTable->iTail >= pVMTable->iMaxLength - 1) {
         vmtable_expand(pVMTable);
     }
+
     pVMTable->OpCodes[++pVMTable->iTail] = iOpCode;
+    pVMTable->OpCodeTypes[pVMTable->iTail] = Type;
     return TRUE;
 };
 
 inline int vmtable_del(vmtable_t *pVMTable) {
     /* Delete a OpCode from the vmtable */
     pVMTable->OpCodes[pVMTable->iTail--] = VM_CTRL_FUNC_SYM;
+    pVMTable->OpCodeTypes[pVMTable->iTail] = OP_CODE_NULL;
     return TRUE;
 };
 
@@ -70,7 +81,7 @@ inline int vmtable_add_vec(vmtable_t *pVMTable, void *pVec, int iLen, int iSize)
     if (pVec == NULL) {
         for (int idx = 0; idx < iLen; idx++) {
             /* Char stored as int */
-            vmtable_add(pVMTable, 0);
+            vmtable_add(pVMTable, 0, OP_CODE_DATA);
         }
     } else {
         /* The input is not a empty vector */
@@ -78,14 +89,14 @@ inline int vmtable_add_vec(vmtable_t *pVMTable, void *pVec, int iLen, int iSize)
             case 1:
                 for (int idx = 0; idx < iLen; idx++) {
                     /* Char stored as int */
-                    vmtable_add(pVMTable, (int) ((char *) pVec)[idx]);
+                    vmtable_add(pVMTable, (int) ((char *) pVec)[idx], OP_CODE_DATA);
                 }
                 /* Add zero */
-                vmtable_add(pVMTable, 0);
+                vmtable_add(pVMTable, 0, OP_CODE_DATA);
                 break;
             case 4:
                 for (int idx = 0; idx < iLen; idx++) {
-                    vmtable_add(pVMTable, ((int *) pVec)[idx]);
+                    vmtable_add(pVMTable, ((int *) pVec)[idx], OP_CODE_DATA);
                 }
                 break;
             default:
@@ -106,20 +117,25 @@ inline int vmtable_strlen(vmtable_t *pVMTable, int iAddr) {
     return iLength;
 }
 
-int vmtable_clear(vmtable_t *pVMTable) {
-    /* Clear the VM table */
-
-    pVMTable->iMaxLength = INIT_VM_TABLE_LEN;
-    pVMTable->iTail = -1;
-    free(pVMTable->OpCodes);
-    pVMTable->OpCodes = NULL;
-    pVMTable->OpCodes = malloc(sizeof(int) * pVMTable->iMaxLength);
-    memset(pVMTable->OpCodes, -3, sizeof(int) * pVMTable->iMaxLength);
-
-    if (pVMTable->OpCodes == NULL) {
-        printf("\n[ Error ] Out of memory\n");
-        exit(ERR_MEM);
-    }
-
-    return TRUE;
-}
+//int vmtable_clear(vmtable_t *pVMTable) {
+//    /* Clear the VM table */
+//
+//    pVMTable->iMaxLength = INIT_VM_TABLE_LEN;
+//    pVMTable->iTail = -1;
+//    free(pVMTable->OpCodes);
+//    pVMTable->OpCodes = NULL;
+//    pVMTable->OpCodes = malloc(sizeof(int) * pVMTable->iMaxLength);
+//
+//    pVMTable->OpCodeTypes = NULL;
+//    pVMTable->OpCodeTypes = malloc(sizeof(e_opcode_type) * pVMTable->iMaxLength);
+//
+//    if (pVMTable->OpCodes == NULL || pVMTable->OpCodeTypes == NULL) {
+//        printf("\n[ Error ] Out of memory\n");
+//        exit(ERR_MEM);
+//    }
+//    
+//    memset(pVMTable->OpCodes, VM_CTRL_FUNC_SYM, sizeof(int) * pVMTable->iMaxLength);
+//    memset(pVMTable->OpCodeTypes, OP_CODE_NULL, sizeof(e_opcode_type) * pVMTable->iMaxLength);
+//
+//    return TRUE;
+//}

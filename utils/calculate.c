@@ -8,6 +8,10 @@
 inline exp_btnode_t *gen_exp_BTNode() {
     /* Dynamically allocate a new Binary Tree Node of expression */
     exp_btnode_t *pBTNode = (exp_btnode_t *) malloc(sizeof(exp_btnode_t));
+    if (pBTNode == NULL) {
+        printf("\n [ Error ] Memory error\n");
+        exit(ERR_MEM);
+    }
     pBTNode->lNode = NULL;
     pBTNode->rNode = NULL;
     pBTNode->type = CALC_NAN;
@@ -68,7 +72,7 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             }
 
             iNumberEnd = idx;
-            strncpy(cNumStrTmp, sExpression + iNumberStart, iNumberEnd - iNumberStart);
+            strncpy(cNumStrTmp, sExpression + iNumberStart, (size_t) iNumberEnd - iNumberStart);
 
             /* Translate the value to int using strtol */
             iNumValTmp = (int) strtol(cNumStrTmp, NULL, 10); // Convertion from long to int
@@ -271,7 +275,9 @@ int build_exp_tree(lac_queue_t *pquePostfixExp, exp_btnode_t *pExpTreeRoot) {
                                               &ExpTreeNodeTmpRoot.u_Value.iNumber,
                                               ExpTreeNodeTmpRoot.u_Data.cOP);
                 if (iRet == CALC_STAT_ERR) {
-                    return CALC_STAT_ERR;
+                    CalcStat = CALC_STAT_ERR;
+                    bFlag = TRUE;
+                    break;
                 }
                 /* Push the root back */
                 stack_push(&stkExpTree, (void *) pExpTreeNodeTmpRoot, sizeof(exp_btnode_t));
@@ -279,6 +285,7 @@ int build_exp_tree(lac_queue_t *pquePostfixExp, exp_btnode_t *pExpTreeRoot) {
             }
             default: {
                 CalcStat = CALC_STAT_ERR;
+                bFlag = TRUE;
                 break;
             }
         }
@@ -288,11 +295,15 @@ int build_exp_tree(lac_queue_t *pquePostfixExp, exp_btnode_t *pExpTreeRoot) {
             bFlag = TRUE;
         }
     }
-    
+
     /* Finally we get the result and free up memory */
     stack_pop(&stkExpTree, (void *) pExpTreeRoot);
     stack_clear(&stkExpTree);
-    CalcStat = CALC_STAT_FIN;
+
+    if (CalcStat != CALC_STAT_ERR) {
+        CalcStat = CALC_STAT_FIN;
+    }
+
     return CalcStat;
 
 }

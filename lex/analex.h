@@ -24,6 +24,18 @@
 // identificateurs    : [^ \n]+
 // entiers            : (\-|\+)?[0-9]+(\.[0-9]+)?[ |\n]
 
+typedef enum e_lexeme_types {
+    WORD,
+    STRING,
+    NUMBER,
+} e_lexeme_types;
+
+typedef struct lexeme_t {
+    e_lexeme_types type;
+    int iStart;
+    int iEnd;
+} lexeme_t;
+
 int isInteger(const char *pcBeg, const char *pcFin, regex_t *pregInteger);
 
 int match_id(const char *psReadBuffer, const char *pcIDBeg, const char *pcIDFin, regex_t *pregIdentifier,

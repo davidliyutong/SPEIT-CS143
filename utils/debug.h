@@ -7,8 +7,11 @@
 
 #include <stdio.h>
 #include "../common/queue.h"
-#include "../common/types.h"
 #include "../common/stack.h"
+#include "../common/btree.h"
+#include "../lex/analex.h"
+#include "../runtime/symtable.h"
+#include "../runtime/vmtable.h"
 
 void disp_annalex_res(char *psReadBuffer, lac_queue_t *pqueRes);
 
