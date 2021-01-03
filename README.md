@@ -71,3 +71,8 @@ Rebug version outputs useful debug information
 ## Report
 
 [Final Report](./misc/pdf/PLT.pdf)
+
+## The `dev` branch
+
+The `dev` branch is a in-developing branch. We try to create a objective / in-fixed lac language that is slitly
+different from what we learned from course.
