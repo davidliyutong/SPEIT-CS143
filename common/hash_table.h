@@ -6,7 +6,7 @@
 #define LAC_HASH_TABLE_H
 
 
-#define  HASH_TABLE_LEN 8
+#define  HASH_TABLE_LEN 32
 
 #include "queue.h"
 #include "macros.h"
@@ -34,15 +34,15 @@ unsigned int hash_table_compute_hash(unsigned char *input);
 
 hash_table_entry *hash_table_gen_entry(const char *sKey, void *pValue, int iSize);
 
-int hash_table_reset(hash_table_t *pHashTable);
+bool hash_table_reset(hash_table_t *pHashTable);
 
-int hash_table_init(hash_table_t *pHashTable);
+bool hash_table_init(hash_table_t *pHashTable);
 
-int hash_table_revert(hash_table_t *pHashTable);
+bool hash_table_revert(hash_table_t *pHashTable);
 
-int hash_table_checkout(hash_table_t *pHashTable);
+bool hash_table_checkout(hash_table_t *pHashTable);
 
-int hash_table_entry_is_empty(hash_table_t *pHashTable, int iHashTableIdx);
+bool hash_table_entry_is_empty(hash_table_t *pHashTable, int iHashTableIdx);
 
 hash_table_query_res hash_table_query(hash_table_t *pHashTable, char *sKey);
 

@@ -43,9 +43,9 @@ int queue_pop_back(lac_queue_t *pQueue, void *pData);
 
 int queue_pop_back_no_free(lac_queue_t *pQueue, void *pData);
 
-int queue_del(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData);
+int queue_del(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData, bool Check);
 
-int queue_del_no_free(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData);
+int queue_del_no_free(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData, bool Check);
 
 void queue_destroy(lac_queue_t *pQueue);
 

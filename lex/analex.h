@@ -34,17 +34,34 @@ typedef struct lexeme_t {
     e_lexeme_types type;
     int iStart;
     int iEnd;
+    int iLength;
+    char *pString;
 } lexeme_t;
 
-int isInteger(const char *pcBeg, const char *pcFin, regex_t *pregInteger);
+typedef enum e_interpret_stat {
+    INTERPRET_DEF, // :
+    INTERPRET_ENDDEF, // ;
+    INTERPRET_DEFER,
+    INTERPRET_LINK,
+    INTERPRET_VAR,
+    INTERPRET_VEC,
+    INTERPRET_IMPORT,
+    INTERPRET_CLASS,
+    INTERPRET_EXIT,
+    INTERPRET_DEFAULT,
+} e_interpret_stat;
 
-int match_id(const char *psReadBuffer, const char *pcIDBeg, const char *pcIDFin, regex_t *pregIdentifier,
-             regex_t *pregInteger, lac_queue_t *pqueRes);
+int isInteger(const char *pcBeg, const char *pcFin, regex_t *pRegInteger);
 
-int match_string(const char *psReadBuffer, const char *pcStringBeg, const char *pcStringFin, regex_t *pregString,
-                 regex_t *pregIdnetifier, regex_t *pregInteger,
-                 lac_queue_t *pqueRes);
+int match_id(const char *psReadBuffer, const char *pcIDBeg, const char *pcIDFin, regex_t *pRegIdentifier,
+             regex_t *pRegInteger, lac_queue_t *pQueRes);
 
-int match_lac(char *psReadBuffer, char *pcReadBufferFin, lac_queue_t *pqueRes);
+int match_string(const char *psReadBuffer, const char *pcStringBeg, const char *pcStringFin, regex_t *pRegString,
+                 regex_t *pRegIdnetifier, regex_t *pRegInteger,
+                 lac_queue_t *pQueRes);
+
+int match_lac(char *psReadBuffer, char *pcReadBufferFin, lac_queue_t *pQueRes);
+
+e_interpret_stat match_keyword(struct lexeme_t LexTmp);
 
 #endif

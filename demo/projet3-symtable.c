@@ -3,17 +3,19 @@
 //
 // Projet3 demo
 
-#include "../runtime/symtable.h"
-#include "../utils/debug.h"
+#include "../common/object.h"
+#include "../runtime/env.h"
 
 int main() {
-
+    g_env_init();
     hash_symtable_t SymTable;
     hash_symtable_init(&SymTable);
     char symbols[4][6] = {"+", "swap", "swap", "swapp"};
+    lac_object_t *pLACObjectTmp;
     int iRet;
     for (int i = 0; i < 4; i++) {
-        iRet = hash_symtable_add(&SymTable, symbols[i], (int) strlen(symbols[i]), 0);
+        pLACObjectTmp = env_create_lac_func(symbols[i], strlen(symbols[i]), 0, VM_FUNC_BASIC, NULL);
+        iRet = hash_symtable_add_obj(&SymTable, symbols[i], (int) strlen(symbols[i]), pLACObjectTmp);
         if (iRet > 0) {
             printf("\n[ Warning ] Duplicated symbol found: %s\n", symbols[i]);
         }

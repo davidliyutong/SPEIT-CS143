@@ -5,13 +5,13 @@
 
 #include "debug.h"
 
-void disp_annalex_res(char *psReadBuffer, lac_queue_t *pqueRes) {
+void disp_annalex_res(char *psReadBuffer, lac_queue_t *pQueRes) {
     /* This function displays the analex result */
     printf("---- Annalex result ----\n");
-    queue_node_t *tmp = pqueRes->pFront;
+    queue_node_t *tmp = pQueRes->pFront;
     lexeme_t res;
     int flag = FALSE;
-    if (pqueRes->iLength > 0) {
+    if (pQueRes->iLength > 0) {
         while (TRUE) {
             res = *(lexeme_t *) tmp->pData;
             switch (res.type) {
@@ -137,7 +137,8 @@ void disp_symtable(hash_symtable_t *pSymTable) {
         pCursor = pSymTable->Data[i].pFront;
         while (pCursor != NULL) {
             pEntryTmp = (hash_table_entry *) pCursor->pData;
-            printf("%s(%d) -> ", pEntryTmp->Key, *(int *) pEntryTmp->pData);
+            printf("%s(%d) -> ", pEntryTmp->Key, ((lac_func_t *) (*(lac_object_t **) pEntryTmp->pData)->Child)->iCFA);
+            fflush(stdout);
             queue_next(&pCursor);
         }
     }
@@ -149,7 +150,7 @@ void disp_vmtable(vmtable_t *pVMTable) {
 
     printf("-------- VM Table -------\n");
     for (int idx = 0; idx <= pVMTable->iTail; ++idx) {
-        printf("%d:%d ", idx, pVMTable->OpCodes[idx]);
+        printf("%d:%d ", idx, (((lac_func_t *) pVMTable->Objects[idx]->Child))->iCFA);
         if (idx % 10 == 0 && idx != 0) {
             printf("\n\n");
         }
@@ -158,12 +159,49 @@ void disp_vmtable(vmtable_t *pVMTable) {
     printf("\n-------------------------\n\n");
 }
 
-void visualize(char *psReadBuffer, lac_queue_t *pqueRes) {
+void disp_objects(lac_queue_t *pQueObjects) {
+    printf("-------- Objects  -------\n");
+
+    lac_object_t *pLACObjectTmp;
+    queue_node_t *pCursor = pQueObjects->pFront;
+    int iCnt = 0;
+    while (pCursor != NULL) {
+        pLACObjectTmp = *(lac_object_t **) pCursor->pData;
+        switch (pLACObjectTmp->Type) {
+
+            case LAC_FUNC:
+                printf("(func)");
+                break;
+            case LAC_INT:
+                printf("(int)");
+                break;
+            case LAC_VEC:
+                printf("(vec)");
+                break;
+            case LAC_VAR:
+                printf("(var)");
+                break;
+            case LAC_CLASS:
+                printf("(class)");
+                break;
+        }
+        printf("%s: %d; ", pLACObjectTmp->Name, pLACObjectTmp->iRefCnt);
+        if (iCnt % 20 == 0 && iCnt != 0) {
+            printf("\n");
+        }
+        iCnt++;
+        queue_next(&pCursor);
+    }
+    fflush(stdout);
+    printf("\n-------------------------\n\n");
+}
+
+void visualize(char *psReadBuffer, lac_queue_t *pQueRes) {
     printf("\n---- Highlight result ----\n");
     lexeme_t res;
     int printIdx = 0;
 //    printf("ddd");
-    queue_node_t *tmp = pqueRes->pFront;
+    queue_node_t *tmp = pQueRes->pFront;
     int flag = FALSE;
     while (TRUE) {
         res = *(lexeme_t *) tmp->pData;

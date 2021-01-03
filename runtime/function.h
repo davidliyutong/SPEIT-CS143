@@ -10,21 +10,40 @@
 #include "../common/queue.h"
 #include "../common/stack.h"
 #include "../common/types.h"
-#include "../runtime/symtable.h"
-#include "../runtime/vmtable.h"
 #include "../utils/calculate.h"
 #include "env.h"
-#include "interpret.h"
 #include "proc.h"
+#include "../common/cfa.h"
+#include "../common/object.h"
 
-void compile_function(char *psReadBuffer, lac_queue_t *pqueRes);
 
-void declare_function(char *psReadBuffer, lac_queue_t *pqueRes);
+typedef struct compile_stat_t {
+    /* Compile mode */
+    bool bIsClass;
+    bool bIf;
+    bool bWhile;
+    int iIfStart;
+    int iElseStart;
+    int iWhileStart;
+    /* Interpret mode */
+    lac_func_t *pFuncCurr;
+    char sScopeName[MAX_LEXEME_LEN];
+    char sModuleName[MAX_LEXEME_LEN]; // for import
 
-void link_declaration(char *psReadBuffer, lac_queue_t *pqueRes);
+    bool bInterpretIfTaken;
+    bool bInterpretWhileTaken;
+} compile_stat_t;
 
-void declare_var(char *psReadBuffer, lac_queue_t *pqueRes);
+bool compile_function(lac_queue_t *pQueRes, compile_stat_t CompileStat);
 
-void declare_vec(char *psReadBuffer, lac_queue_t *pqueRes);
+hash_table_query_res hash_symtable_search_all(lexeme_t LexTmp, compile_stat_t CompileStat);
+
+void declare_function(lac_queue_t *pQueRes, compile_stat_t CompileStat);
+
+void link_declaration(lac_queue_t *pQueRes, compile_stat_t CompileStat);
+
+void declare_var(lac_queue_t *pQueRes, compile_stat_t CompileStat);
+
+void declare_vec(lac_queue_t *pQueRes, compile_stat_t CompileStat);
 
 #endif //LAC_FUNCTION_H

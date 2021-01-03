@@ -4,468 +4,664 @@
 
 #include "function.h"
 
-void compile_function(char *psReadBuffer, lac_queue_t *pqueRes) {
-    /* This fucnction compiles lac functions */
+bool concat_func_name(char psDst[], char *psScope, char *psName, int iLength) {
+    int iScopeLength = (int) strlen(psScope);
+    memset(psDst, 0, sizeof(char) * MAX_LEXEME_LEN);
+    if ((iLength + iScopeLength - 2) > MAX_LEXEME_LEN) {
+        return FALSE;
+    } else {
+        strcpy(psDst, psScope);
+        if (iScopeLength > 0) {
+            psDst[iScopeLength] = '.';
+            strncpy(psDst + iScopeLength + 1, psName, (size_t) iLength);
+        } else {
+            strncpy(psDst, psName, (size_t) iLength);
+        }
+
+        return TRUE;
+    }
+}
+
+hash_table_query_res hash_symtable_search_all(lexeme_t LexTmp, compile_stat_t CompileStat) {
+    /* Search local and global symbole table */
+    /* Lexeme str should be prepared */
+    char LexemeStrScope[MAX_LEXEME_LEN] = {0};
+    char LexemeStrModule[MAX_LEXEME_LEN] = {0};
+    int iRet;
+    hash_table_query_res SymbolQueryRes = {-1, NULL};
+
+    iRet = concat_func_name(LexemeStrScope, CompileStat.sScopeName, LexTmp.pString, LexTmp.iLength);
+    if (!iRet) {
+        /* Overflow */
+        /* The variables/functions inside other functions will have father function name added before */
+        printf("\n[ Warning ] Symbol Name over flow\n");
+        g_env_reset();
+        return SymbolQueryRes;
+    }
+
+    iRet = concat_func_name(LexemeStrModule, CompileStat.sModuleName, LexTmp.pString, LexTmp.iLength);
+    if (!iRet) {
+        /* Overflow */
+        /* The variables/functions inside other functions will have father function name added before */
+        printf("\n[ Warning ] Symbol Name over flow\n");
+        g_env_reset();
+        return SymbolQueryRes;
+    }
+
+    /* Search local */
+    if (CompileStat.pFuncCurr != NULL) {
+        SymbolQueryRes = hash_symtable_search(&CompileStat.pFuncCurr->SymTable, LexTmp.pString, LexTmp.iLength);
+        if (SymbolQueryRes.pNode == NULL) {
+            /* If failed, search global */
+            SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, LexTmp.pString, LexTmp.iLength);
+            if (SymbolQueryRes.pNode == NULL) {
+                /* Try this method */
+                SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, LexemeStrScope, MAX_LEXEME_LEN);
+                if (SymbolQueryRes.pNode == NULL) {
+                    /* Try this method */
+                    SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, LexemeStrModule, MAX_LEXEME_LEN);
+                }
+            }
+        }
+    } else {
+        SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, LexTmp.pString, LexTmp.iLength);
+        if (SymbolQueryRes.pNode == NULL) {
+            /* Try this method */
+            SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, LexemeStrScope, MAX_LEXEME_LEN);
+            if (SymbolQueryRes.pNode == NULL) {
+                /* Try this method */
+                SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, LexemeStrModule, MAX_LEXEME_LEN);
+            }
+        }
+    }
+
+    return SymbolQueryRes;
+}
+
+bool compile_function(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
+    /* This fucnction compiles lac functions recursively*/
 
     /* The : is already popped, hear comes the function */
     lexeme_t LexTmp;
-    int iStrIdx; // tmp value
-    int iCFATmp; //tmp value
-    int iCFACurr; // for the key word 'recursive' only
     int iImmVal; // Immediate value
-    int iJumpStart; // tmp value, if jump start from stack
-    int iBreakStart;// tmp value, while break start from stack
-    int iWhileStart;// tmp value, while loop start from stack
     int iRet;
+    bool bFuncCompileRes;
     hash_table_query_res SymbolQueryRes;
+    e_interpret_stat InterpretType;
 
-
-    lac_stack_t StkIf; // counter that records the number of if's, use for detecting syntax error
-    lac_stack_t StkElse;  // counter that records the number of else's, use for detecting syntax error
-    lac_stack_t StkWhile; // counter that records the number of while, and the loop destination
-    lac_stack_t StkBreak; // counter that records the number of break, and the break destination
-
-    stack_init(&StkIf);
-    stack_init(&StkElse);
-    stack_init(&StkWhile);
-    stack_init(&StkBreak);
-    int iIfLastIdx;   // last if's idx
-    int iElseLastIdx; // last if's idx
+    lac_object_t *pLACObjectTmp;
+    lac_func_t *pLACFuncTmp;
+    char LexemeStrTmp[MAX_LEXEME_LEN];
+    compile_stat_t NewCompileStat;
 
     /* Get the name of symbol */
-    queue_pop_front(pqueRes, (void *) &LexTmp);
 
-    if (LexTmp.type != WORD) {
-        printf("\n[ Warning ] Function not properly named, invalid name\n");
-        g_proc_env_reset();
-        return;
-    }
-    char *pSymbolStr = psReadBuffer + LexTmp.iStart;
-    int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
-
-    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-    iRet = hash_symtable_add(&g_Env.SymTable, pSymbolStr, iSymbolLength, g_Env.VMTable.iTail);
-    iCFACurr = g_Env.VMTable.iTail;
-    if (iRet == ERR_SYMBOL_OVERFLOW) {
-        g_proc_env_reset();
-        return;
-    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
+    if (!CompileStat.bIf && !CompileStat.bWhile) { // compiling function or class with out if / while
+        queue_pop_front(pQueRes, (void *) &LexTmp);
+        if (LexTmp.type != WORD) {
+            printf("\n[ Warning ] Function not properly named, invalid name\n");
+            g_env_reset();
+            return FALSE;
+        } else {
+            iRet = concat_func_name(LexemeStrTmp, CompileStat.sScopeName, LexTmp.pString, LexTmp.iLength);
+            if (!iRet) {
+                /* Overflow */
+                /* The variables/functions inside other functions will have father function name added before */
+                printf("\n[ Warning ] Symbol Name over flow\n");
+                g_env_reset();
+                return FALSE;
+            }
+            switch (CompileStat.bIsClass) {
+                case TRUE:
+                    pLACObjectTmp = env_create_lac_class(LexemeStrTmp, 0, VM_CFA_LAC, VM_FUNC_LAC, NULL);
+                    break;
+                case FALSE:
+                    pLACObjectTmp = env_create_lac_func(LexemeStrTmp, 0, VM_CFA_LAC, VM_FUNC_LAC, NULL);
+                    break;
+            }
+            iRet = hash_symtable_add_obj(&g_Env.SymTable, LexemeStrTmp, (int) strlen(LexemeStrTmp), pLACObjectTmp);
+            CompileStat.pFuncCurr = (lac_func_t *) pLACObjectTmp->Child;
+            if (iRet == ERR_SYMBOL_OVERFLOW) {
+                printf("\n[ Warning ] Symbol Name overflow\n");
+                g_env_reset();
+                return FALSE;
+            } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
-        printf("\n[ Debug ] Define function %.*s with CFA = %d\n", LexTmp.iEnd - LexTmp.iStart, psReadBuffer + LexTmp.iStart, iCFACurr);
-        fflush(stdout);
+                printf("\n[ Debug ] Define function %s \n", LexemeStrTmp);
+                fflush(stdout);
 #endif
-    } else {
-        printf("\n[ Info ] Semantic risk, Duplicate definition, previous definition will be replaced\n");
+            } else {
+                printf("\n[ Info ] Semantic risk, Duplicate definition, previous definition will be replaced\n");
+            }
+
+            strcpy(CompileStat.sScopeName, LexemeStrTmp); // Modify the status.scope
+        }
     }
+
 
     /* The : and the name is popped */
     while (TRUE) {
-        if (queue_is_empty(pqueRes) == TRUE) {
-            printf("\n[ Waring ] Syntax error, function is not defined properly\n");
-            g_proc_env_reset();
-            return;
+        if (queue_is_empty(pQueRes) == TRUE) {
+            printf("\n[ Waring ] Syntax Error, function is not defined properly\n");
+            g_env_reset();
+            return FALSE;
         }
-        queue_pop_front(pqueRes, (void *) &LexTmp);
-        pSymbolStr = psReadBuffer + LexTmp.iStart;
-        iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
-
-        /* In function variables, note they are in fact global variables*/
-        if (strncmp(psReadBuffer + LexTmp.iStart, "variable", 8) == 0 &&
-            (LexTmp.iEnd - LexTmp.iStart) == 8) {
-            /* The definition of variable will interrupt the function, use 'else' to skip it */
-            vmtable_add(&g_Env.VMTable, VM_CFA_JR, OP_CODE_INST);
-            vmtable_add(&g_Env.VMTable, g_Env.VMTable.iTail + 6, OP_CODE_DATA);
-            declare_var(psReadBuffer, pqueRes);
-            continue;
+        if (CompileStat.pFuncCurr == NULL) {
+            printf("\n[ Waring ] Syntax Error, try to process function definition that is not started\n");
+            g_env_reset();/*[!] Could move this statement to outside */
+            return FALSE;
         }
 
-        /* In function vectors, note they are in fact global vectors*/
-        if (strncmp(psReadBuffer + LexTmp.iStart, "vec", 3) == 0 &&
-            (LexTmp.iEnd - LexTmp.iStart) == 3) {
+        queue_pop_front(pQueRes, (void *) &LexTmp);
 
-            /* The definition of variable will interrupt the function, use 'else' as unconditional jump to skip it */
-            vmtable_add(&g_Env.VMTable, VM_CFA_JR, OP_CODE_INST);
-
-            int iVecStart = g_Env.VMTable.iTail + 1; // start of 'vec' jump
-            vmtable_add(&g_Env.VMTable, 0, OP_CODE_DATA); // pseudo value
-
-            declare_vec(psReadBuffer, pqueRes); // declare the vec
-            g_Env.VMTable.OpCodes[iVecStart] = g_Env.VMTable.iTail; // set the pre-defined pseudo value to real jump destination
-            continue;
-        }
-
-        if (strncmp(psReadBuffer + LexTmp.iStart, ";", 1) == 0) {
-            /* The end of definition */
-            break;
-        }
-        if (strncmp(psReadBuffer + LexTmp.iStart, ":", 1) == 0) {
-            /* begin of another function？ No!*/
-            printf("\n[ Waring ] Syntax error, function is not defined properly, missing ;\n");
-            g_proc_env_reset();
-            return;
+        /* match keywords */
+        InterpretType = match_keyword(LexTmp);
+        switch (InterpretType) {
+            case INTERPRET_DEF:
+                bFuncCompileRes = compile_function(pQueRes, CompileStat);
+                if (bFuncCompileRes == FALSE) {
+                    return FALSE;
+                }
+                break;
+            case INTERPRET_ENDDEF:
+                if (!CompileStat.bWhile && !CompileStat.bIf) {
+                    /* The end of definition */
+                    /* Add a fin. [!] this can be done by directly add the opcode fin */
+                    vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_FIN]); // le CFA de (fin)
+                    /* Save the status of VMTable and SymTable */
+                    hash_symtable_checkout(&CompileStat.pFuncCurr->SymTable);
+                    hash_symtable_checkout(&g_Env.SymTable);
+                    vmtable_checkout(&CompileStat.pFuncCurr->VMTable);
+                    return TRUE;
+                } else {
+                    printf("\n[ Waring ] Syntax Error, function is not defined properly\n");
+                    g_env_reset();/*[!] Could move this statement to outside */
+                    return FALSE;
+                }
+            case INTERPRET_VAR:
+                declare_var(pQueRes, CompileStat);
+                continue;
+            case INTERPRET_VEC:
+                declare_vec(pQueRes, CompileStat);
+                continue;
+            case INTERPRET_DEFER:
+                link_declaration(pQueRes, CompileStat);
+                continue;
+            case INTERPRET_CLASS:
+                printf("\n[ Warning ] Defining class is not allowed here\n");
+            case INTERPRET_IMPORT:
+            case INTERPRET_EXIT: /*[!] actually is allowed here */
+            case INTERPRET_LINK:
+                printf("\n[ Waring ] Syntax Error, keyword not allowed here\n");
+                g_env_reset();
+                return FALSE;
+            case INTERPRET_DEFAULT:
+            default:
+                break;
         }
 
         /* Not the end of definition */
-
-        if (LexTmp.type == WORD) {
-            /* A word is encountered */
-            SymbolQueryRes = hash_symtable_search(&g_Env.SymTable, pSymbolStr, iSymbolLength);
-            if (SymbolQueryRes.idx < 0) {
-                printf("\n[ Warning ] Semantic error, Undefined symbol: %.*s\n", LexTmp.iEnd - LexTmp.iStart,
-                       psReadBuffer + LexTmp.iStart);
-                g_proc_env_reset();
-                return;
-            } else {
-                iCFATmp = hash_symtable_get_cfa(&g_Env.SymTable, pSymbolStr, iSymbolLength);
-                /* if -> 26 else -> 28 then -> 30 */
-                switch (iCFATmp) {
-                    case VM_CFA_WHILE: {
-                        stack_push_vm(&StkWhile, g_Env.VMTable.iTail + 1);
-                        vmtable_add(&g_Env.VMTable, iCFATmp, OP_CODE_INST);
-                        stack_push_vm(&StkBreak, -1); // Add an invalid CFA to break stack, mark the begin of loop
-                        break;
-                    }
-                    case VM_CFA_BREAK: {
-                        stack_push_vm(&StkBreak, g_Env.VMTable.iTail + 2);
-                        vmtable_add(&g_Env.VMTable, iCFATmp, OP_CODE_INST);
-                        vmtable_add(&g_Env.VMTable, -1, OP_CODE_INST); // loop end destination, now its an invalid value.
-                        break;
-                    }
-                    case VM_CFA_LOOP: {
-                        while (stack_is_empty(&StkBreak) != TRUE) {
-                            /* A while loop may have more thant one breaks */
-                            iBreakStart = stack_pop_vm(&StkBreak);
-                            if (iBreakStart >= 0) {
-                                g_Env.VMTable.OpCodes[iBreakStart] = g_Env.VMTable.iTail + 2;
-                            } else {
-                                break;
-                            }
-                        }
-                        if (stack_is_empty(&StkWhile) == TRUE) {
-                            printf("\n[ Warning ] Syntax error, mismatched 'while' and 'loop'\n");
-                            g_proc_env_reset();
-                            return;
-                        } else {
-                            iWhileStart = stack_pop_vm(&StkWhile);
-                        }
-                        vmtable_add(&g_Env.VMTable, iCFATmp, OP_CODE_INST);
-                        vmtable_add(&g_Env.VMTable, iWhileStart, OP_CODE_DATA);
-                        break;
-                    }
-                    case VM_CFA_IF: {
-                        stack_push_vm(&StkIf, g_Env.VMTable.iTail +
-                                              2); // where if's jump position is stored, need to be filled after else/then is encountered
-                        vmtable_add(&g_Env.VMTable, iCFATmp, OP_CODE_INST);
-                        vmtable_add(&g_Env.VMTable, -1, OP_CODE_DATA); // jump destination, now its an invalid value.
-                        break;
-                    }
-                    case VM_CFA_ELSE: {
-                        iJumpStart = stack_pop_vm(&StkIf); // if's jump position
-                        g_Env.VMTable.OpCodes[iJumpStart] =
-                                g_Env.VMTable.iTail + 2; // set the if's jump destination to this else
-
-                        stack_push_vm(&StkElse, g_Env.VMTable.iTail +
-                                                2); // where else's jump position is stored, need to be filled after else/then is encountered
-                        vmtable_add(&g_Env.VMTable, iCFATmp, OP_CODE_INST);
-                        vmtable_add(&g_Env.VMTable, -1, OP_CODE_DATA); // jump destination, now its an invalid value.
-                        break;
-                    }
-                    case VM_CFA_THEN: {
-                        if (stack_is_empty(&StkIf)) iIfLastIdx = -1;
-                        else iIfLastIdx = stack_top_vm(&StkIf);
-
-                        if (stack_is_empty(&StkElse)) iElseLastIdx = -1;
-                        else iElseLastIdx = stack_top_vm(&StkElse);
-
-                        if (iElseLastIdx == -1 && iIfLastIdx == -1) {
-                            printf("\n[ Warning ] Syntax error, mismatched 'If', 'else' and 'then'\n");
-                            g_proc_env_reset();
-                            return;
-                        }
-
-                        if (iIfLastIdx < iElseLastIdx) {
-                            /* The closest symbol is else */
-                            iJumpStart = stack_pop_vm(&StkElse);
-                            g_Env.VMTable.OpCodes[iJumpStart] = g_Env.VMTable.iTail; // set the else's jump destination
-                        } else {
-                            /* The closest symbol is if */
-                            iJumpStart = stack_pop_vm(&StkIf);
-                            g_Env.VMTable.OpCodes[iJumpStart] = g_Env.VMTable.iTail; // set the if's jump destination
-                        }
-                        break;
-                    }
-
-                    default:
-                        if (iCFATmp != VM_CFA_RECURSE) {
-                            vmtable_add(&g_Env.VMTable, iCFATmp, OP_CODE_INST);
-                        } else {
-                            /* Recursive function: Execute the current function */
-                            vmtable_add(&g_Env.VMTable, iCFACurr, OP_CODE_INST);
-                        }
-
-
+        switch (LexTmp.type) {
+            case WORD:
+                /* A word is encountered */
+                iRet = concat_func_name(LexemeStrTmp, CompileStat.sScopeName, LexTmp.pString, LexTmp.iLength);
+                if (!iRet) {
+                    /* Overflow */
+                    /* The variables/functions inside other functions will have father function name added before */
+                    printf("\n[ Warning ] Symbol Name over flow\n");
+                    g_env_reset();
+                    return FALSE;
                 }
-            }
-        } else if (LexTmp.type == NUMBER) {
-            /* Add a lit. [!] this can be done by directly add the opcode lit */
-            vmtable_add(&g_Env.VMTable, VM_CFA_LIT, OP_CODE_INST); // 20 is the CFA of (lit) [!]
-            iImmVal = (int) strtol(psReadBuffer + LexTmp.iStart, NULL, 10);
-            vmtable_add(&g_Env.VMTable, iImmVal, OP_CODE_INST);
-        } else if (LexTmp.type == STRING) {
-            /* If a string is encountered */
-            /* We store the string on the VMTable, so it must be skipped during execution */
-            /* 'Else' function is the unconditional jump function, it is used to skip the string*/
 
-            /* First add a unconditional jump to skip */
-            int iStrLen = LexTmp.iEnd - LexTmp.iStart;
-            vmtable_add(&g_Env.VMTable, VM_CFA_JR, OP_CODE_INST);
-            vmtable_add(&g_Env.VMTable, g_Env.VMTable.iTail + iStrLen + 2, OP_CODE_DATA);
+                SymbolQueryRes = hash_symtable_search_all(LexTmp, CompileStat);
+                if (SymbolQueryRes.pNode == NULL) {
+                    printf("\n[ Warning ] Semantic Error, Undefined symbol: %.*s\n", LexTmp.iLength, LexTmp.pString);
+                    g_env_reset();
+                    return FALSE;
+                } else {
+                    pLACObjectTmp = hash_symtable_get_obj_from_query(SymbolQueryRes);
+                    switch (pLACObjectTmp->Type) {
+                        case LAC_INT:
+                        case LAC_VEC:
+                        case LAC_VAR:
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+                            continue;
+                        case LAC_FUNC:
+                            break;
+                        case LAC_CLASS:
+                            printf("\n[ Warning ] Semantic Error,trying to instance a class: %.*s inside function\n", LexTmp.iLength, LexTmp.pString);
+                            continue;
+                    }
+                    /* if -> 26 else -> 28 then -> 30 */
+                    pLACFuncTmp = (lac_func_t *) pLACObjectTmp->Child;
+                    switch (pLACFuncTmp->iCFA) {
+                        case VM_CFA_ERROR:
+                            printf("\n[ Warning ] Unknown error\n");
+                            g_env_reset();
+                            return FALSE;
 
-            /* Then store the string to VMTable */
-            iStrIdx = g_Env.VMTable.iTail + 1; // Get the string's idx
-            vmtable_add_vec(&g_Env.VMTable, psReadBuffer + LexTmp.iStart, LexTmp.iEnd - LexTmp.iStart, sizeof(char));
+                        case VM_CFA_WHILE:
+                            /* [ while(JR) | x+3 | JR  | LOOP_END | ... | break(JR) | x+1 | ... |   loop   | x+3(WHILE_START) |
+                             * [    x      | x+1 | x+2 |   x+3    | ... |           |     | ... |          |     LOOP_END     |*/
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_WHILE]);
 
-            /* The string is saved to iStrIdx, we save this value to vmtable*/
-            /* Do the same as the situation of numbers (lit) + adddr */
-            vmtable_add(&g_Env.VMTable, VM_CFA_LIT, OP_CODE_INST);
-            vmtable_add(&g_Env.VMTable, iStrIdx, OP_CODE_INST);
+                            NewCompileStat = CompileStat;
+                            NewCompileStat.bWhile = TRUE;
+                            NewCompileStat.iWhileStart = CompileStat.pFuncCurr->VMTable.iTail; // x 
+
+                            pLACObjectTmp = env_create_lac_int(CompileStat.pFuncCurr->VMTable.iTail + 3); // x + 3
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_JR]);
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, &vmtable_invalid_func);
+                            iRet = compile_function(pQueRes, NewCompileStat);
+                            if (iRet == FALSE) {
+                                printf("\n[ Waring ] Syntax Error, invalid while loop\n");
+                                g_env_reset();
+                                return FALSE;
+                            }
+                            break;
+
+                        case VM_CFA_BREAK:
+                            if (CompileStat.bWhile != TRUE) {
+                                printf("\n[ Waring ] Syntax Error, break not included in while block\n");
+                                g_env_reset();
+                                return FALSE;
+                            }
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_BREAK]);
+                            pLACObjectTmp = env_create_lac_int(CompileStat.iWhileStart + 1); // x + 1
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+                            break;
+
+                        case VM_CFA_LOOP:
+                            if (CompileStat.bWhile != TRUE) {
+                                printf("\n[ Waring ] Syntax Error, loop defined with out while\n");
+                                g_env_reset();
+                                return FALSE;
+                            } else {
+                                vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_LOOP]);
+                                pLACObjectTmp = env_create_lac_int(CompileStat.iWhileStart + 3); // x + 3
+                                vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+
+                                pLACObjectTmp = env_create_lac_int(CompileStat.pFuncCurr->VMTable.iTail);
+                                vmtable_set(&CompileStat.pFuncCurr->VMTable, CompileStat.iWhileStart + 3, pLACObjectTmp);
+                                return TRUE;
+                            }
+
+                        case VM_CFA_IF:
+                            /* [ IF | ELSE_END/COND_END | ... | ELSE(JR) | COND_END |   THEN   |
+                             * [  x |        x+1        | ... |   ...    | ELSE_END | COND_END | */
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_IF]);
+                            pLACObjectTmp = env_create_lac_int(-1);
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+
+                            NewCompileStat = CompileStat;
+                            NewCompileStat.bIf = TRUE;
+                            NewCompileStat.iIfStart = CompileStat.pFuncCurr->VMTable.iTail; // x + 1
+                            NewCompileStat.iElseStart = -1; // invalid
+                            iRet = compile_function(pQueRes, NewCompileStat);
+                            if (iRet == FALSE) {
+                                printf("\n[ Waring ] Syntax Error, invalid while loop\n");
+                                g_env_reset();
+                                return FALSE;
+                            }
+                            break;
+
+                        case VM_CFA_ELSE:
+                            if (CompileStat.bIf != TRUE) {
+                                printf("\n[ Waring ] Syntax Error, else defined with out if\n");
+                                g_env_reset();
+                                return FALSE;
+                            }
+                            if (CompileStat.iElseStart > 0) {
+                                printf("\n[ Waring ] Syntax Error, more than one else in a condition\n");
+                                g_env_reset();
+                                return FALSE;
+                            }
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_ELSE]);
+                            pLACObjectTmp = env_create_lac_int(-1);
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+
+                            CompileStat.iElseStart = CompileStat.pFuncCurr->VMTable.iTail;
+                            break;
+
+                        case VM_CFA_THEN:
+                            if (CompileStat.bIf != TRUE) {
+                                printf("\n[ Waring ] Syntax Error, else defined with out if\n");
+                                g_env_reset();
+                                return FALSE;
+                            } else {
+                                vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_THEN]);
+                                if (CompileStat.iElseStart > 0) {
+                                    /* If ... Else ... Then */
+                                    ((lac_int_t *) CompileStat.pFuncCurr->VMTable.Objects[CompileStat.iIfStart]->Child)->iValue = CompileStat.iElseStart;
+                                    ((lac_int_t *) CompileStat.pFuncCurr->VMTable.Objects[CompileStat.iElseStart]->Child)->iValue = CompileStat.pFuncCurr->VMTable.iTail;
+
+                                } else {
+                                    /* If ... Then */
+                                    ((lac_int_t *) CompileStat.pFuncCurr->VMTable.Objects[CompileStat.iIfStart]->Child)->iValue = CompileStat.pFuncCurr->VMTable.iTail;
+                                }
+                                return TRUE;
+                            }
+                        case VM_CFA_RECURSE:
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_RECURSE]);
+                            break;
+
+                        default:
+                            /* Recursive function: Execute the current function */
+                            vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+
+                    }
+                }
+                break;
+            case STRING:
+                /* If a string is encountered */
+                pLACObjectTmp = env_create_lac_vec(NULL, 0, LexTmp.iLength, sizeof(char), LexTmp.pString);
+
+                /* Then store the string */
+                /* vmtable_add(&g_Env.VMTable, g_Env.VMTable.OpCodes[VM_CFA_LIT]); */
+                vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+                break;
+            case NUMBER:
+                /* Add a lit. This is no longer necessary*/
+                /* vmtable_add(&g_Env.VMTable, g_Env.VMTable.OpCodes[VM_CFA_LIT]); */
+                iImmVal = (int) strtol(LexTmp.pString, NULL, 10);
+                pLACObjectTmp = env_create_lac_int(iImmVal);
+                vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+                break;
+        }
+
+    }
+}
+
+void declare_function(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
+    /* This function declares a lac functions */
+
+    /* The defer is already popped, hear comes the function(declare) */
+    lexeme_t FuncName;
+    int iRet;
+    lac_object_t *pLACObjectTmp;
+    char LexemeStrTmp[MAX_LEXEME_LEN];
+
+    /* Get the name of symbol */
+    queue_pop_front(pQueRes, (void *) &FuncName);
+
+    if (FuncName.type != WORD) {
+        printf("\n[ Warning ] Function not properly named, invalid name\n");
+        g_env_reset();
+        return;
+    }
+
+    iRet = concat_func_name(LexemeStrTmp, CompileStat.sScopeName, FuncName.pString, FuncName.iLength);
+    if (!iRet) {
+        /* Overflow */
+        /* The variables/functions inside other functions will have father function name added before */
+        printf("\n[ Warning ] Symbol Name over flow\n");
+        g_env_reset();
+        return;
+    }
+
+    /* This is an invalid function */
+    int iLength = (int) strlen(LexemeStrTmp);
+    pLACObjectTmp = env_create_lac_func(LexemeStrTmp, iLength, VM_CFA_ERROR, VM_FUNC_LAC, NULL);
+
+    iRet = hash_symtable_add_obj(&g_Env.SymTable, LexemeStrTmp, iLength, pLACObjectTmp);
+    if (iRet == ERR_SYMBOL_OVERFLOW) {
+        printf("\n[ Warning ] Symbol Name overflow\n");
+        g_env_reset();
+        return;
+    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
+#ifdef DEBUG
+        printf("\n[ Debug ] Declare function %.*s\n", iLength, LexemeStrTmp);
+        fflush(stdout);
+        if (CompileStat.pFuncCurr != NULL) {
+            hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, LexemeStrTmp, iLength, pLACObjectTmp);
+            hash_symtable_checkout(&CompileStat.pFuncCurr->SymTable);
+        }
+#endif
+    } else {
+        printf("\n[ Info ] Semantic risk of (defer), Duplicate declearation, previous definition will be replaced\n");
+        /* Local variable in local symbol table */
+        if (CompileStat.pFuncCurr != NULL) {
+            hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, LexemeStrTmp, iLength, pLACObjectTmp);
+            hash_symtable_checkout(&CompileStat.pFuncCurr->SymTable);
         }
 
     }
 
-    /* If-else syntax check */
-    if (stack_is_empty(&StkIf) == FALSE || stack_is_empty(&StkElse) == FALSE) {
-        printf("\n[ Warning ] Syntax error, mismatched 'If', 'else' and 'then'\n");
-        g_proc_env_reset();
-    }
-
-    /* Add a fin. [!] this can be done by directly add the opcode fin */
-    vmtable_add(&g_Env.VMTable, VM_CFA_FIN, OP_CODE_INST); // 11 est le CFA de (fin)
-    stack_clear(&StkIf);
-    stack_clear(&StkElse);
-    stack_clear(&StkWhile);
-    stack_clear(&StkBreak);
     /* Save the status of VMTable and StrTable */
     hash_symtable_checkout(&g_Env.SymTable);
-    vmtable_checkout(&g_Env.VMTable);
 }
 
-void declare_function(char *psReadBuffer, lac_queue_t *pqueRes) {
-    /* This function declares a lac functions */
-
-    /* The defer is already popped, hear comes the function(declare) */
-    lexeme_t LexTmp;
-    int iRet;
-
-    /* Get the name of symbol */
-    queue_pop_front(pqueRes, (void *) &LexTmp);
-
-    if (LexTmp.type != WORD) {
-        printf("\n[ Warning ] Function not properly named, invalid name\n");
-        g_proc_env_reset();
-        return;
-    }
-
-    char *pSymbolStr = psReadBuffer + LexTmp.iStart;
-    int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
-
-    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-    iRet = hash_symtable_add(&g_Env.SymTable, pSymbolStr, iSymbolLength, g_Env.VMTable.iTail);
-    if (iRet == ERR_SYMBOL_OVERFLOW) {
-        g_proc_env_reset();
-        return;
-    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
-#ifdef DEBUG
-        printf("\n[ Debug ] Declare function %.*s with CFA = %d\n", iSymbolLength,
-               pSymbolStr, g_Env.VMTable.iTail);
-        fflush(stdout);
-#endif
-    } else {
-        printf("\n[ Warning ] Semantic error, Duplicate declaration of: %.*s\n", iSymbolLength,
-               pSymbolStr);
-        g_proc_env_reset();
-        return;
-        /* [!] this can be done better */
-    }
-    /* Add an pseudo(wrong) function and a (fin) */
-    vmtable_add(&g_Env.VMTable, VM_CFA_ERROR, OP_CODE_INST);
-    vmtable_add(&g_Env.VMTable, VM_CFA_FIN, OP_CODE_INST);
-    /* Save the status of VMTable and StrTable */
-    hash_symtable_checkout(&g_Env.SymTable);
-    vmtable_checkout(&g_Env.VMTable);
-}
-
-void link_declaration(char *psReadBuffer, lac_queue_t *pqueRes) {
+void link_declaration(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     /* This function links function to declaration: Src -> Dst declares a lac functions */
 
     /* The ' is already popped, hear comes the function */
     /* ' Dst is Src */
-    lexeme_t LexDst;
-    lexeme_t LexSrc;
-    lexeme_t LexIs;
-
-    int iDstCFA;
-    int iSrcCFA;
-    hash_table_query_res DstSymbolQueryRes;
-    hash_table_query_res SrcSymbolQueryRes;
+    lexeme_t LexDst, LexSrc, LexIs;
+    lac_object_t *pDstFunction;
+    lac_object_t *pSrcFunction;
+    hash_table_query_res DstSymbolQueryRes, SrcSymbolQueryRes;
 
     /* Get the name of declaration and function */
-    queue_pop_front(pqueRes, (void *) &LexDst);
-    queue_pop_front(pqueRes, (void *) &LexIs);
-    queue_pop_front(pqueRes, (void *) &LexSrc);
+    queue_pop_front(pQueRes, (void *) &LexSrc);
+    queue_pop_front(pQueRes, (void *) &LexIs);
+    queue_pop_front(pQueRes, (void *) &LexDst);
 
     /* Syntax check */
     int iLexIsLength = LexIs.iEnd - LexIs.iStart;
-    char *pLexIsStr = psReadBuffer + LexIs.iStart;
-
-    if (!(strncmp(pLexIsStr, "is", 2) == 0 && iLexIsLength == 2)) {
-        printf("\n[ Warning ] Syntax error, expect 'is' after ' at %d\n", LexIs.iStart);
-        g_proc_env_reset();
+    if (!(strncmp(LexIs.pString, "is", 2) == 0 && iLexIsLength == 2)) {
+        printf("\n[ Warning ] Syntax Error, expect 'is' after ' at %d\n", LexIs.iStart);
+        g_env_reset();
+        return;
+    }
+    if (LexDst.iLength > MAX_LEXEME_LEN || LexSrc.iLength > MAX_LEXEME_LEN) {
+        printf("\n[ Warning ] Symbol overflow\n");
+        g_env_reset();
         return;
     }
 
     /* Get CFA of Dst (the well-defined function) */
-    char *pLexDstStr = psReadBuffer + LexDst.iStart;
-    int iLexDstLength = LexDst.iEnd - LexDst.iStart;
-    DstSymbolQueryRes = hash_symtable_search(&g_Env.SymTable, pLexDstStr, iLexDstLength);
-
-    if (DstSymbolQueryRes.idx < 0) {
-        printf("\n[ Warning ] Semantic error, link Dst (%.*s) is invalid\n", iLexDstLength,
-               pLexDstStr);
-        g_proc_env_reset();
+    DstSymbolQueryRes = hash_symtable_search_all(LexDst, CompileStat);
+    if (SrcSymbolQueryRes.pNode == NULL) {
+        printf("\n[ Warning ] Semantic Error, link Dst (%.*s) is invalid\n", LexDst.iLength, LexDst.pString);
+        g_env_reset();
         return;
-        /* [!] this can be done better */
     } else {
-        iDstCFA = hash_symtable_get_cfa(&g_Env.SymTable, pLexDstStr, iLexDstLength);
+        pDstFunction = hash_symtable_get_obj(&g_Env.SymTable, LexDst.pString, LexDst.iLength);
     }
 
     /* Get CFA of Src (the function declaration) */
-    char *pLexSrcStr = psReadBuffer + LexSrc.iStart;
-    int iLexSrcLength = LexSrc.iEnd - LexSrc.iStart;
-    SrcSymbolQueryRes = hash_symtable_search(&g_Env.SymTable, pLexSrcStr, iLexSrcLength);
-
-
-    if (SrcSymbolQueryRes.idx < 0) {
-        printf("\n[ Warning ] Semantic error, link Src (%.*s) is invalid\n", iLexSrcLength,
-               pLexSrcStr);
-        g_proc_env_reset();
+    SrcSymbolQueryRes = hash_symtable_search_all(LexSrc, CompileStat);
+    if (SrcSymbolQueryRes.pNode == NULL) {
+        printf("\n[ Warning ] Semantic Error, link Src (%.*s) is invalid\n", LexSrc.iLength, LexSrc.pString);
+        g_env_reset();
         return;
         /* [!] this can be done better */
     } else {
-        iSrcCFA = hash_symtable_get_cfa(&g_Env.SymTable, pLexSrcStr, iLexSrcLength);
+        pSrcFunction = hash_symtable_get_obj(&g_Env.SymTable, LexSrc.pString, LexSrc.iLength);
     }
 
-    /* Link */
-    g_Env.VMTable.OpCodes[iSrcCFA + 1] = iDstCFA;
+    /* Judge if the two are functions */
+    if (pSrcFunction->Type == LAC_FUNC && pDstFunction->Type == LAC_FUNC) {
+        /* Link */
+        vmtable_clear(&((lac_func_t *) pSrcFunction->Child)->VMTable);
+        vmtable_add(&((lac_func_t *) pSrcFunction->Child)->VMTable, pDstFunction);
+        vmtable_add(&((lac_func_t *) pSrcFunction->Child)->VMTable, g_Env.BasicFuncTable.Objects[VM_CFA_FIN]);
+        ((lac_func_t *) pSrcFunction->Child)->iCFA = VM_CFA_LAC;
 #ifdef DEBUG
-    printf("\n[ Debug ] Link function %.*s to %.*s\n", iLexSrcLength, pLexSrcStr,
-           iLexDstLength, pLexDstStr);
-    fflush(stdout);
+        printf("\n[ Debug ] Link function %.*s to %.*s\n", LexSrc.iLength, LexSrc.pString, LexDst.iLength, LexDst.pString);
+        fflush(stdout);
 #endif
-    /* Save the status of VMTable and StrTable */
-    hash_symtable_checkout(&g_Env.SymTable);
-    vmtable_checkout(&g_Env.VMTable);
-}
+    } else if (pSrcFunction->Type == LAC_FUNC && pDstFunction->Type == LAC_CLASS) {
+        lac_func_t *pFunc = (lac_func_t *) pSrcFunction->Child;
+        queue_node_t *pCursor;
+        char LexemeStrTmp[MAX_LEXEME_LEN] = {0};
+        char InstanceName[MAX_LEXEME_LEN] = {0};
+        hash_table_entry *pOldEntryTmp;
+        lac_object_t *pLACObjectTmp;
+        int iRet;
 
-void declare_var(char *psReadBuffer, lac_queue_t *pqueRes) {
-    lexeme_t LexTmp;
-    int iRet;
+        /* Modify the DstFunction to match SrcClass */
+        env_instance_class(pDstFunction, pSrcFunction);
+        /* Name of instance */
+        strcpy(InstanceName, pSrcFunction->Name);
 
-    /* Get the name of symbol */
-    queue_pop_front(pqueRes, (void *) &LexTmp);
-
-    if (LexTmp.type != WORD) {
-        printf("\n[ Warning ] Variable not properly named, invalid name\n");
-        g_proc_env_reset();
+        for (int idx = 0; idx < HASH_TABLE_LEN; idx++) {
+            pCursor = pFunc->SymTable.Data[idx].pFront;
+            while (pCursor != NULL) {
+                pOldEntryTmp = (hash_table_entry *) pCursor->pData;
+                pLACObjectTmp = *(lac_object_t **) pOldEntryTmp->pData;
+                iRet = concat_func_name(LexemeStrTmp, InstanceName, pOldEntryTmp->Key, (int) strlen(pOldEntryTmp->Key));
+                if (!iRet) {
+                    /* Overflow */
+                    /* The variables/functions inside other functions will have father function name added before */
+                    printf("\n[ Warning ] Symbol Name over flow\n");
+                    g_env_reset();
+                    return;
+                }
+                /* Register */
+                hash_symtable_add_obj(&g_Env.SymTable, LexemeStrTmp, (int) strlen(LexemeStrTmp), pLACObjectTmp);
+                queue_next(&pCursor);
+            }
+        }
+    } else {
+        printf("\n[ Warning ] Syntax Error, trying to link two non-functions\n");
+        g_env_reset();
         return;
     }
 
-    char *pSymboleStr = psReadBuffer + LexTmp.iStart;
-    int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
+    /* Save the status of VMTable and StrTable */
+    hash_symtable_checkout(&g_Env.SymTable);
+}
 
-    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-    iRet = hash_symtable_add(&g_Env.SymTable, pSymboleStr, iSymbolLength, g_Env.VMTable.iTail);
+void declare_var(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
+    lexeme_t VarName;
+    int iRet;
+    lac_object_t *pLACObjectTmp;
+    char LexemeStrTmp[MAX_LEXEME_LEN];
+
+
+    /* Get the name of symbol */
+    queue_pop_front(pQueRes, (void *) &VarName);
+    if (VarName.type != WORD) {
+        printf("\n[ Warning ] Variable not properly named, invalid name\n");
+        g_env_reset();
+        return;
+    }
+
+    iRet = concat_func_name(LexemeStrTmp, CompileStat.sScopeName, VarName.pString, VarName.iLength);
+    if (!iRet) {
+        /* Overflow */
+        /* The variables/functions inside other functions will have father function name added before */
+        printf("\n[ Warning ] Symbol Name over flow\n");
+        g_env_reset();
+        return;
+    }
+
+    pLACObjectTmp = env_create_lac_var(LexemeStrTmp, (int) strlen(LexemeStrTmp), NULL);
+//    if (CompileStat.pFuncCurr != NULL) {
+//        /* Not in mode interpret */
+//        vmtable_add(&CompileStat.pFuncCurr->VMTable, pLACObjectTmp);
+//        vmtable_checkout(&CompileStat.pFuncCurr->VMTable);
+//
+//    }
+
+    iRet = hash_symtable_add_obj(&g_Env.SymTable, LexemeStrTmp, (int) strlen(LexemeStrTmp), pLACObjectTmp);
     if (iRet == ERR_SYMBOL_OVERFLOW) {
-        g_proc_env_reset();
+        printf("\n[ Warning ] Symbol Name overflow\n");
+        g_env_reset();
         return;
     } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
-        printf("\n[ Debug ] A variable %.*s is defined at VMTable[%d]\n", iSymbolLength,
-               pSymboleStr, g_Env.VMTable.iTail);
+        printf("\n[ Debug ] A variable %s is defined]\n", LexemeStrTmp);
+        if (CompileStat.pFuncCurr != NULL) {
+            /* Not in mode interpret */
+            hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, VarName.pString, VarName.iLength, pLACObjectTmp);
+            hash_symtable_checkout(&CompileStat.pFuncCurr->SymTable);
+        }
 #endif
     } else {
         printf("\n[ Info ] Semantic risk of (var), Duplicate definition, previous definition will be replaced\n");
+        /* Local variable in local symbol table */
+        if (CompileStat.pFuncCurr != NULL) {
+            /* Not in mode interpret */
+            hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, VarName.pString, VarName.iLength, pLACObjectTmp);
+            hash_symtable_checkout(&CompileStat.pFuncCurr->SymTable);
+        }
     }
 
-    vmtable_add(&g_Env.VMTable, VM_CFA_LIT, OP_CODE_INST);
-    vmtable_add(&g_Env.VMTable, g_Env.VMTable.iTail + 3, OP_CODE_DATA); // address of pseudo value
-    vmtable_add(&g_Env.VMTable, VM_CFA_FIN, OP_CODE_INST);
-    vmtable_add(&g_Env.VMTable, 0, OP_CODE_DATA); // pseudo value
-    /* Save the status of VMTable and StrTable */
+    /* Save the status of SymbolTable */
     hash_symtable_checkout(&g_Env.SymTable);
-    vmtable_checkout(&g_Env.VMTable);
 }
 
-void declare_vec(char *psReadBuffer, lac_queue_t *pqueRes) {
+
+void declare_vec(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     /* Declare a vector */
 
-    lexeme_t LexTmp;
+    lexeme_t VecName;
+    lexeme_t VecLength;
+
     int iRet;
+    lac_object_t *pLACObjectTmp;
+    char LexemeStrTmp[MAX_LEXEME_LEN];
 
     /* Get the name of symbol */
-    queue_pop_front(pqueRes, (void *) &LexTmp);
+    queue_pop_front(pQueRes, (void *) &VecName);
 
-    if (LexTmp.type != WORD) {
+    if (VecName.type != WORD) {
         printf("\n[ Warning ] Vec not properly named, invalid name\n");
-        g_proc_env_reset();
+        g_env_reset();
         return;
     }
 
-    char *pSymbolStr = psReadBuffer + LexTmp.iStart;
-    int iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
-
-    vmtable_add(&g_Env.VMTable, VM_LAC_FUNC_SYM, OP_CODE_INST);
-    iRet = hash_symtable_add(&g_Env.SymTable, pSymbolStr, iSymbolLength, g_Env.VMTable.iTail);
-    if (iRet == ERR_SYMBOL_OVERFLOW) {
-        g_proc_env_reset();
+    iRet = concat_func_name(LexemeStrTmp, CompileStat.sScopeName, VecName.pString, VecName.iLength);
+    if (!iRet) {
+        /* Overflow */
+        /* The variables/functions inside other functions will have father function name added before */
+        printf("\n[ Warning ] Symbol Name over flow\n");
+        g_env_reset();
         return;
-    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
-#ifdef DEBUG
-        printf("\n[ Debug ] A vector %.*s is defined at VMTable[%d]\n", iSymbolLength,
-               pSymbolStr, g_Env.VMTable.iTail);
-#endif
-    } else {
-        printf("\n[ Info ] Semantic risk of (vec), Duplicate definition, previous definition will be replaced\n");
     }
 
     /* Get the length of vector */
-    queue_pop_front(pqueRes, (void *) &LexTmp);
-    pSymbolStr = psReadBuffer + LexTmp.iStart;
-    iSymbolLength = LexTmp.iEnd - LexTmp.iStart;
-
-    int iVecLen = (int) strtol(pSymbolStr, NULL, 10);
+    queue_pop_front(pQueRes, (void *) &VecLength);
+    int iVecLen = (int) strtol(VecLength.pString, NULL, 10);
     if (iVecLen <= 0) {
         /* There is a syntax error */
         printf("\n[ Warning ] Vec not properly defined, invalid length\n");
-        g_proc_env_reset();
+        g_env_reset();
         return;
     }
+
+    pLACObjectTmp = env_create_lac_vec(VecName.pString, VecName.iLength, iVecLen, 4, NULL);
+
+    iRet = hash_symtable_add_obj(&g_Env.SymTable, LexemeStrTmp, (int) strlen(LexemeStrTmp), pLACObjectTmp);
+    if (iRet == ERR_SYMBOL_OVERFLOW) {
+        printf("\n[ Warning ] Symbol Name overflow\n");
+        g_env_reset();
+        return;
+    } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
-    printf("\n[ Debug ] A vector %.*s of length %d is defined at VMTable[%d]\n", iSymbolLength,
-           pSymbolStr, iVecLen, g_Env.VMTable.iTail);
+        printf("\n[ Debug ] A vector %.*s is defined\n", VecName.iLength, VecName.pString);
+        if (CompileStat.pFuncCurr != NULL) {
+            /* Not in mode interpret */
+            hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, VecName.pString, VecName.iLength, pLACObjectTmp);
+            hash_symtable_checkout(&g_Env.SymTable);
+        }
+#endif
+    } else {
+        printf("\n[ Info ] Semantic risk of (vec), Duplicate definition, previous definition will be replaced\n");
+        if (CompileStat.pFuncCurr != NULL) {
+            /* Not in mode interpret */
+            hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, VecName.pString, VecName.iLength, pLACObjectTmp);
+            hash_symtable_checkout(&g_Env.SymTable);
+        }
+    }
+#ifdef DEBUG
+    printf("\n[ Debug ] A vector %.*s of length %d is defined\n", VecName.iLength, VecName.pString, iVecLen);
 #endif
 
-    /* First add the unconditional jump to skip the data area */
-    vmtable_add(&g_Env.VMTable, VM_CFA_JR, OP_CODE_INST);
-    vmtable_add(&g_Env.VMTable, g_Env.VMTable.iTail + 1 + iVecLen, OP_CODE_DATA);
-
-    int iVecIdx = g_Env.VMTable.iTail + 1; // address for the beginning of vector
-    vmtable_add_vec(&g_Env.VMTable, NULL, iVecLen, sizeof(int)); // add iVecLen 0s to the VMTable
-    vmtable_add(&g_Env.VMTable, VM_CFA_LIT, OP_CODE_INST);
-    vmtable_add(&g_Env.VMTable, iVecIdx, OP_CODE_DATA); // address of pseudo value
-    vmtable_add(&g_Env.VMTable, VM_CFA_FIN, OP_CODE_INST);
-
-    /* Save the status of VMTable and StrTable */
+    /* Save the status of SymbolTable */
     hash_symtable_checkout(&g_Env.SymTable);
-    vmtable_checkout(&g_Env.VMTable);
 }

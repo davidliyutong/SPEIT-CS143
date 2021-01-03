@@ -5,7 +5,7 @@
 // Also this blog https://blog.csdn.net/weixin_42167759/article/details/81209320
 
 #include "md5.h"
-
+#ifdef USE_MD5
 unsigned char PADDING[] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -158,3 +158,4 @@ void MD5Transform(unsigned int state[4], const unsigned char block[64]) {
     state[2] += c;
     state[3] += d;
 }
+#endif

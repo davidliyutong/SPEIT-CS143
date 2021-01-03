@@ -20,6 +20,7 @@
     /                   :
     (lit)               :
     (fin)               :
+    (lac)               :
     calculate           :
     if                  :
     else                :
@@ -50,6 +51,7 @@ basic g_proc_basic_func[INIT_PROC_FUNC_NUM] = {proc_func_dup,
                                                proc_func_div,
                                                proc_func_lit,
                                                proc_func_fin,
+                                               proc_func_lac,
                                                proc_func_calculate,
                                                proc_func_if,
                                                proc_func_else,
@@ -77,6 +79,7 @@ char g_proc_basic_func_name[INIT_PROC_FUNC_NUM][10] = {"dup",
                                                        "/",
                                                        "(lit)",
                                                        "(fin)",
+                                                       "(lac)",
                                                        "calculate",
                                                        "if",
                                                        "else",
@@ -89,185 +92,403 @@ char g_proc_basic_func_name[INIT_PROC_FUNC_NUM][10] = {"dup",
                                                        "break",
                                                        "jr"};
 
-int g_proc_basic_func_type[INIT_PROC_FUNC_NUM] = {VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM, // div
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_BASIC_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM, // recurse
-                                                  VM_CTRL_FUNC_SYM, // @
-                                                  VM_CTRL_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM,
-                                                  VM_CTRL_FUNC_SYM
+e_vm_func_type g_proc_basic_func_type[INIT_PROC_FUNC_NUM] = {VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC, // div
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_CTRL,
+                                                             VM_FUNC_CTRL,
+                                                             VM_FUNC_CTRL,
+                                                             VM_FUNC_CTRL, // recurse
+                                                             VM_FUNC_BASIC, // @
+                                                             VM_FUNC_BASIC,
+                                                             VM_FUNC_CTRL,
+                                                             VM_FUNC_CTRL,
+                                                             VM_FUNC_CTRL,
+                                                             VM_FUNC_CTRL
 };
 
 
 void proc_func_dup() {
-    int iOp1 = *(int *) g_Env.StkData.pTop->pData;
-    stack_push_vm(&g_Env.StkData, iOp1);
+    lac_object_t *Op = stack_top_data(&g_Env.StkData);
+    stack_push_data(&g_Env.StkData, Op);
 }
 
 void proc_func_drop() {
-    stack_pop_vm(&g_Env.StkData);
+    stack_pop_data(&g_Env.StkData);
 }
 
 void proc_func_swap() {
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    stack_push_vm(&g_Env.StkData, iOp1);
-    stack_push_vm(&g_Env.StkData, iOp2);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    stack_push_data(&g_Env.StkData, Op1);
+    stack_push_data(&g_Env.StkData, Op2);
 }
 
 void proc_func_dot() {
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    printf("%d", iOp1);
+    lac_object_t *Op = stack_pop_data(&g_Env.StkData);
+    if (Op->Type == LAC_VAR) Op = ((lac_var_t *) Op->Child)->Object;
+    int idx;
+
+    switch (Op->Type) {
+        case LAC_CLASS:
+            printf("%s", Op->Name);
+            break;
+        case LAC_FUNC:
+            printf("%s:%d", Op->Name, ((lac_func_t *) Op->Child)->iCFA);
+            break;
+        case LAC_INT:
+            printf("%d", ((lac_int_t *) Op->Child)->iValue);
+            break;
+        case LAC_VEC:
+            idx = 0;
+            printf("[");
+            while (idx < ((lac_vec_t *) Op->Child)->iLength) {
+                printf("%d", ((lac_vec_t *) Op->Child)->pData[idx]);
+                if (idx < ((lac_vec_t *) Op->Child)->iLength - 1) {
+                    printf(", ");
+                }
+                ++idx;
+            }
+            printf("]");
+            break;
+        case LAC_VAR:
+            printf("\n[ Warning ] Syntax Error, trying to dot a var(var)\n");
+            g_env_reset();
+            return;
+    }
     fflush(stdout);
 }
 
-//void proc_func_count() {
-//    int iAddr = stack_pop_vm(&g_Env.StkData); // address of the string in the strtable
-//    int iLength = (int) strlen(&g_Env.StrTable.cStr[iAddr]);
-//    stack_push_vm(&g_Env.StkData, iAddr);
-//    stack_push_vm(&g_Env.StkData, iLength);
-//}
 void proc_func_count() {
-    int iAddr = stack_top_vm(&g_Env.StkData); // address of the string in the strtable
-    int iLength = vmtable_strlen(&g_Env.VMTable, iAddr);
-    stack_push_vm(&g_Env.StkData, iLength);
+    lac_object_t *Op = stack_top_data(&g_Env.StkData); // address of the string in the strtable
+    lac_object_t *Res;
+    int iCnt;
+    if (Op->Type == LAC_VAR) Op = ((lac_var_t *) Op->Child)->Object;
+    switch (Op->Type) {
+        case LAC_VEC:
+            iCnt = vmtable_strlen(Op->Child);
+            Res = env_create_lac_int(iCnt);
+            stack_push_data(&g_Env.StkData, Res);
+            break;
+        case LAC_FUNC:
+        case LAC_VAR:
+        case LAC_INT:
+        default:
+            printf("\n[ Warning ] Syntax Error, trying to count a function / var, type:%d\n", Op->Type);
+            g_env_reset();
+            return;
+    }
 }
 
 void proc_func_type() {
-    int e = stack_pop_vm(&g_Env.StkData);
-    int iAddr = stack_pop_vm(&g_Env.StkData);
-    for (int i = 0; i < e; i++) {
-        printf("%c", (char) g_Env.VMTable.OpCodes[iAddr + i]);
+    lac_object_t *Count = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Str = stack_pop_data(&g_Env.StkData);
+    if (Count->Type == LAC_VAR) Count = ((lac_var_t *) Count->Child)->Object;
+    if (Str->Type == LAC_VAR) Str = ((lac_var_t *) Str->Child)->Object;
+
+    if (Count->Type == LAC_INT && Str->Type == LAC_VEC) {
+        for (int idx = 0; idx < ((lac_int_t *) Count->Child)->iValue; idx++) {
+            printf("%c", (char) (((lac_vec_t *) Str->Child)->pData[idx]));
+        }
+    } else {
+        printf("\n[ Warning ] Syntax Error, trying to type a function / var or the count is incorrect\n");
+        g_env_reset();
+        return;
     }
 }
 
 void proc_func_equal() {
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    if (iOp1 == iOp2) {
-        stack_push_vm(&g_Env.StkData, 1);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    if (Op1->Type == LAC_VAR) Op1 = ((lac_var_t *) Op1->Child)->Object;
+    if (Op2->Type == LAC_VAR) Op2 = ((lac_var_t *) Op2->Child)->Object;
+
+    lac_object_t *Res;
+    bool bFlag;
+    if (Op1->Type == LAC_INT && Op2->Type == LAC_INT) {
+        if (((lac_int_t *) Op1->Child)->iValue == ((lac_int_t *) Op2->Child)->iValue) {
+            bFlag = TRUE;
+        } else {
+            bFlag = FALSE;
+        }
+    } else if (Op1->Type == LAC_VEC && Op2->Type == LAC_VEC) {
+        lac_vec_t *Vec1 = ((lac_vec_t *) Op1->Child);
+        lac_vec_t *Vec2 = ((lac_vec_t *) Op2->Child);
+        if (Vec1->iLength == Vec2->iLength && Vec1->iRef == Vec2->iRef && Vec1->iSize == Vec2->iSize) {
+            if (memcmp(Vec1->pData, Vec2->pData, Vec1->iSize * Vec1->iLength)) {
+                bFlag = TRUE;
+            } else {
+                bFlag = FALSE;
+            }
+        } else {
+            bFlag = FALSE;
+        }
+
     } else {
-        stack_push_vm(&g_Env.StkData, 0);
+        printf("\n[ Warning ] Syntax Error, trying to evaluate two incomparable types\n");
+        g_env_reset();
+        return;
     }
+
+    if (bFlag == TRUE) {
+        Res = env_create_lac_int(1);
+        stack_push_data(&g_Env.StkData, Res);
+    } else {
+        Res = env_create_lac_int(0);
+        stack_push_data(&g_Env.StkData, Res);
+    }
+    return;
 }
 
 void proc_func_gt() {
-    /* Greater than */
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    if (iOp1 < iOp2) {
-        stack_push_vm(&g_Env.StkData, 1);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    if (Op1->Type == LAC_VAR) Op1 = ((lac_var_t *) Op1->Child)->Object;
+    if (Op2->Type == LAC_VAR) Op2 = ((lac_var_t *) Op2->Child)->Object;
+
+    lac_object_t *Res;
+    if (Op1->Type == LAC_INT && Op2->Type == LAC_INT) {
+        if (((lac_int_t *) Op2->Child)->iValue > ((lac_int_t *) Op1->Child)->iValue) {
+            Res = env_create_lac_int(1);
+            stack_push_data(&g_Env.StkData, Res);
+        } else {
+            Res = env_create_lac_int(0);
+            stack_push_data(&g_Env.StkData, Res);
+
+        }
     } else {
-        stack_push_vm(&g_Env.StkData, 0);
+        printf("\n[ Warning ] Syntax Error, trying to compare two non-var types\n");
+        g_env_reset();
+        return;
     }
+
 }
 
 void proc_func_lt() {
-    /* Less than */
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    if (iOp1 > iOp2) {
-        stack_push_vm(&g_Env.StkData, 1);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    if (Op1->Type == LAC_VAR) Op1 = ((lac_var_t *) Op1->Child)->Object;
+    if (Op2->Type == LAC_VAR) Op2 = ((lac_var_t *) Op2->Child)->Object;
+
+    lac_object_t *Res;
+    if (Op1->Type == LAC_INT && Op2->Type == LAC_INT) {
+        if (((lac_int_t *) Op2->Child)->iValue < ((lac_int_t *) Op1->Child)->iValue) {
+            Res = env_create_lac_int(1);
+            stack_push_data(&g_Env.StkData, Res);
+        } else {
+            Res = env_create_lac_int(0);
+            stack_push_data(&g_Env.StkData, Res);
+
+        }
     } else {
-        stack_push_vm(&g_Env.StkData, 0);
+        printf("\n[ Warning ] Syntax Error, trying to compare two non-var types\n");
+        g_env_reset();
+        return;
     }
 }
 
 void proc_func_mult() {
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    stack_push_vm(&g_Env.StkData, iOp1 * iOp2);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    if (Op1->Type == LAC_VAR) Op1 = ((lac_var_t *) Op1->Child)->Object;
+    if (Op2->Type == LAC_VAR) Op2 = ((lac_var_t *) Op2->Child)->Object;
+
+    lac_object_t *Res;
+    if (Op1->Type == LAC_INT && Op2->Type == LAC_INT) {
+        Res = env_create_lac_int(0);
+        ((lac_int_t *) Res->Child)->iValue = ((lac_int_t *) Op1->Child)->iValue * ((lac_int_t *) Op2->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
+    } else {
+        printf("\n[ Warning ] Syntax Error, trying to compare two non-var types\n");
+        g_env_reset();
+        return;
+    }
 }
 
 void proc_func_plus() {
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    stack_push_vm(&g_Env.StkData, iOp1 + iOp2);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    if (Op1->Type == LAC_VAR) Op1 = ((lac_var_t *) Op1->Child)->Object;
+    if (Op2->Type == LAC_VAR) Op2 = ((lac_var_t *) Op2->Child)->Object;
+
+    lac_object_t *Res;
+    if (Op1->Type == LAC_INT && Op2->Type == LAC_INT) {
+        Res = env_create_lac_int(0);
+        ((lac_int_t *) Res->Child)->iValue = ((lac_int_t *) Op1->Child)->iValue + ((lac_int_t *) Op2->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
+    } else if (Op1->Type == LAC_INT && Op2->Type == LAC_VEC) {
+        Res = env_create_lac_vec(NULL, 0, ((lac_vec_t *) Op2->Child)->iLength, ((lac_vec_t *) Op2->Child)->iSize, NULL);
+        ((lac_vec_t *) Res->Child)->pData = ((lac_vec_t *) Op2->Child)->pData;
+        ((lac_vec_t *) Res->Child)->iRef = ((lac_vec_t *) Op1->Child)->iRef + ((lac_int_t *) Op2->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
+    } else if (Op2->Type == LAC_INT && Op1->Type == LAC_VEC) {
+        Res = env_create_lac_vec(NULL, 0, ((lac_vec_t *) Op1->Child)->iLength, ((lac_vec_t *) Op1->Child)->iSize, NULL);
+        ((lac_vec_t *) Res->Child)->pData = ((lac_vec_t *) Op1->Child)->pData;
+        ((lac_vec_t *) Res->Child)->iRef = ((lac_vec_t *) Op2->Child)->iRef + ((lac_int_t *) Op1->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
+    } else {
+        printf("\n[ Warning ] Syntax Error, trying to add two wrong types\n");
+        g_env_reset();
+        return;
+    }
+
 }
 
 void proc_func_minus() {
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    stack_push_vm(&g_Env.StkData, iOp2 - iOp1);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    if (Op1->Type == LAC_VAR) Op1 = ((lac_var_t *) Op1->Child)->Object;
+    if (Op2->Type == LAC_VAR) Op2 = ((lac_var_t *) Op2->Child)->Object;
+
+    lac_object_t *Res;
+    if (Op1->Type == LAC_INT && Op2->Type == LAC_INT) {
+        Res = env_create_lac_int(0);
+        ((lac_int_t *) Res->Child)->iValue = ((lac_int_t *) Op2->Child)->iValue - ((lac_int_t *) Op1->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
+    } else if (Op1->Type == LAC_INT && Op2->Type == LAC_VEC) {
+        Res = env_create_lac_vec(NULL, 0, ((lac_vec_t *) Op2->Child)->iLength, ((lac_vec_t *) Op2->Child)->iSize, NULL);
+        ((lac_vec_t *) Res->Child)->pData = ((lac_vec_t *) Op2->Child)->pData;
+        ((lac_vec_t *) Res->Child)->iRef = ((lac_vec_t *) Op2->Child)->iRef - ((lac_int_t *) Op1->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
+    } else if (Op2->Type == LAC_INT && Op1->Type == LAC_VEC) {
+        Res = env_create_lac_vec(NULL, 0, ((lac_vec_t *) Op1->Child)->iLength, ((lac_vec_t *) Op1->Child)->iSize, NULL);
+        ((lac_vec_t *) Res->Child)->pData = ((lac_vec_t *) Op1->Child)->pData;
+        ((lac_vec_t *) Res->Child)->iRef = ((lac_vec_t *) Op1->Child)->iRef - ((lac_int_t *) Op2->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
+    } else {
+        printf("\n[ Warning ] Syntax Error, trying to compare two non-var types\n");
+        g_env_reset();
+        return;
+    }
 }
 
 void proc_func_div() {
-    int iOp1 = stack_pop_vm(&g_Env.StkData);
-    int iOp2 = stack_pop_vm(&g_Env.StkData);
-    if (iOp1 != 0) {
-        stack_push_vm(&g_Env.StkData, iOp2 / iOp1);
+    lac_object_t *Op1 = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Op2 = stack_pop_data(&g_Env.StkData);
+    if (Op1->Type == LAC_VAR) Op1 = ((lac_var_t *) Op1->Child)->Object;
+    if (Op2->Type == LAC_VAR) Op2 = ((lac_var_t *) Op2->Child)->Object;
+
+    lac_object_t *Res;
+    if (Op1->Type == LAC_INT && Op2->Type == LAC_INT) {
+        Res = env_create_lac_int(0);
+        ((lac_int_t *) Res->Child)->iValue = ((lac_int_t *) Op2->Child)->iValue / ((lac_int_t *) Op1->Child)->iValue;
+        stack_push_data(&g_Env.StkData, Res);
     } else {
-        printf("\n[ Warning ] Divided by 0, The answer is 0\n");
-        stack_push_vm(&g_Env.StkData, 0);
-    };
+        printf("\n[ Warning ] Syntax Error, trying to compare two non-var types\n");
+        g_env_reset();
+        return;
+    }
 }
 
 void proc_func_lit() {
-    int iAddr = stack_pop_vm(&g_Env.StkReturn);
-    stack_push_vm(&g_Env.StkReturn, iAddr + 1);
-    stack_push_vm(&g_Env.StkData, g_Env.VMTable.OpCodes[iAddr + 1]);
+    int iAddr = stack_pop_return(&g_Env.StkReturn);
+    stack_push_return(&g_Env.StkReturn, iAddr + 1);
+    lac_object_t *pLACObjectTmp = g_Env.pLACVMTable->Objects[iAddr + 1];
+    stack_push_data(&g_Env.StkData, pLACObjectTmp);
+
+    if (pLACObjectTmp->Type == LAC_VAR) pLACObjectTmp = ((lac_var_t *) pLACObjectTmp->Child)->Object;
+
 #ifdef DEBUG
-    printf("\n[ Debug ] Fonction (lit) executed, %d is read to StkData\n", g_Env.VMTable.OpCodes[iAddr + 1]);
+    switch (pLACObjectTmp->Type) {
+        case LAC_FUNC:
+            printf("\n[ Debug ] Fonction (lit) executed, %d is read to StkData\n", ((lac_func_t *) pLACObjectTmp->Child)->iCFA);
+            break;
+        case LAC_INT:
+            printf("\n[ Debug ] Fonction (lit) executed, %d is read to StkData\n", ((lac_int_t *) pLACObjectTmp->Child)->iValue);
+
+        case LAC_VEC:
+            printf("\n[ Debug ] Fonction (lit) executed, vector is read to StkData\n");
+            break;
+        case LAC_VAR:
+            printf("\n[ Warning ] Syntax Error, trying to lit a var(var)\n");
+            g_env_reset();
+            return;
+        case LAC_CLASS:
+            printf("\n[ Debug ] Fonction (lit) executed, class %s is read to StkData\n", pLACObjectTmp->Name);
+            break;
+    }
 #endif
 }
 
 void proc_func_fin() {
 #ifdef DEBUG
-    int iAddr = stack_pop_vm(&g_Env.StkReturn);
-    printf("\n[ Debug ] Fonction (fin) executed, %d is erased from StkReturn\n", iAddr);
+    int iAddr = stack_pop_return(&g_Env.StkReturn);
+    printf("\n[ Debug ] Function (fin) executed, %d is erased from StkReturn\n", iAddr);
 #else
-    stack_pop_vm(&g_Env.StkReturn);
+    stack_pop_return(&g_Env.StkReturn);
 #endif
 }
 
+void proc_func_lac() {
+    ;
+}
+
 void proc_func_calculate() {
-    int iAddr = stack_pop_vm(&g_Env.StkData);
-    int iLength = vmtable_strlen(&g_Env.VMTable, iAddr);
-    char *psCalcString = calloc((size_t) iLength + 1, sizeof(char));
-    for (int idx = 0; idx < iLength; idx++) {
-        psCalcString[idx] = (char) g_Env.VMTable.OpCodes[iAddr + idx];
+    lac_object_t *Addr = stack_pop_data(&g_Env.StkData);
+    if (Addr->Type == LAC_VAR) Addr = ((lac_var_t *) Addr->Child)->Object;
+
+    if (Addr->Type == LAC_VEC) {
+        int iLength = vmtable_strlen(Addr->Child);
+        char *psCalcString = calloc((size_t) iLength + 1, sizeof(char));
+        if (psCalcString == NULL) {
+            printf("\n[ Error ] Memory Error\n");
+        }
+        for (int idx = 0; idx < iLength; idx++) {
+            psCalcString[idx] = (char) ((lac_vec_t *) Addr->Child)->pData[idx];
+        }
+        int ans;
+        calculate_exp_int(psCalcString, iLength, &ans);
+        lac_object_t *Ans = env_create_lac_int(ans);
+        stack_push_data(&g_Env.StkData, Ans);
+        free(psCalcString);
+    } else {
+        printf("\n[ Warning ] Syntax Error, trying to calculate a non-vector\n");
+        g_env_reset();
+        return;
     }
-
-    int ans;
-    calculate_exp_int(psCalcString, iLength, &ans);
-
-    stack_push_vm(&g_Env.StkData, ans);
-    free(psCalcString);
 }
 
 void proc_func_if() {
-    int iCond = stack_pop_vm(&g_Env.StkData); // [?] Consumes the top of data stack
+    lac_object_t *Cond = stack_pop_data(&g_Env.StkData); // [?] Consumes the top of data stack
+    if (Cond->Type == LAC_VAR) Cond = ((lac_var_t *) Cond->Child)->Object;
+
     int iAddr;
-    if (iCond > 0) {
-        iAddr = stack_pop_vm(&g_Env.StkReturn);
-        stack_push_vm(&g_Env.StkReturn, iAddr + 1);
+
+    if (Cond->Type != LAC_INT) {
+        printf("\n[ Warning ] Syntax Error, trying to do condition on a non-var\n");
+        g_env_reset();
+        return;
+    }
+    if (((lac_int_t *) Cond->Child)->iValue > 0) {
+        iAddr = stack_pop_return(&g_Env.StkReturn);
+        stack_push_return(&g_Env.StkReturn, iAddr + 1);
 #ifdef DEBUG
         printf("\n [ Debug ] Function If is taken\n");
 #endif
     } else {
-        iAddr = stack_pop_vm(&g_Env.StkReturn);
-        stack_push_vm(&g_Env.StkReturn, g_Env.VMTable.OpCodes[iAddr + 1]);
+        iAddr = stack_pop_return(&g_Env.StkReturn);
+        if (g_Env.pLACVMTable->Objects[iAddr + 1]->Type != LAC_INT) {
+            printf("\n[ Warning ] Syntax Error, trying to do jump to a non-var destination\n");
+            g_env_reset();
+            return;
+        }
+        stack_push_return(&g_Env.StkReturn, ((lac_int_t *) (g_Env.pLACVMTable->Objects[iAddr + 1]->Child))->iValue);
 #ifdef DEBUG
-        printf("\n [ Debug ] Function If is not taken, jumps to %d from %d\n", g_Env.VMTable.OpCodes[iAddr + 1], iAddr);
+        printf("\n[ Debug ] Function If is not taken, jumps to %d from %d\n", ((lac_int_t *) (g_Env.pLACVMTable->Objects[iAddr + 1]->Child))->iValue, iAddr);
 #endif
     }
 
@@ -291,43 +512,95 @@ void proc_func_recurse() {
 }
 
 void proc_func_at() {
-    /* read variable */
-    int iAddr = stack_pop_vm(&g_Env.StkData);
-    int ans;
-
-    if (g_Env.VMTable.OpCodeTypes[iAddr] == OP_CODE_DATA) {
-        ans = g_Env.VMTable.OpCodes[iAddr];
-        stack_push_vm(&g_Env.StkData, ans);
-#ifdef DEBUG
-        printf("\n[ Debug ] A value %d is pushed into data stack\n", ans);
-        fflush(stdout);
-#endif
-    } else {
-        /* This place of memory is not data */
-        printf("\n[ Warning ] Illegal lac memory access");
-        g_proc_env_reset();
+    lac_object_t *Val = stack_pop_data(&g_Env.StkData);
+    lac_object_t *pLACObjectTmp;
+    switch (Val->Type) {
+        case LAC_VEC:
+            pLACObjectTmp = env_create_lac_int(((lac_vec_t *) Val->Child)->pData[((lac_vec_t *) Val->Child)->iRef]);
+            stack_push_data(&g_Env.StkData, pLACObjectTmp);
+            break;
+        case LAC_VAR:
+            pLACObjectTmp = ((lac_var_t *) Val->Child)->Object;
+            stack_push_data(&g_Env.StkData, pLACObjectTmp);
+            break;
+        case LAC_FUNC:
+            printf("\n[ Warning ] Syntax Error, trying to at a Func");
+            break;
+        case LAC_INT:
+            stack_push_data(&g_Env.StkData, Val);
+        case LAC_CLASS:
+            printf("\n[ Warning ] Syntax Error, trying to at a Class");
+            break;
     }
 }
 
 void proc_func_exclaim() {
-    int iAddr = stack_pop_vm(&g_Env.StkData);
-    int iVal = stack_pop_vm(&g_Env.StkData);
-    if (g_Env.VMTable.OpCodeTypes[iAddr] == OP_CODE_DATA) {
-        /* This place of memory is writable */
-        g_Env.VMTable.OpCodes[iAddr] = iVal;
+    lac_object_t *Addr = stack_pop_data(&g_Env.StkData);
+    lac_object_t *Val = stack_pop_data(&g_Env.StkData);
+
+    if (Val->Type == LAC_VAR) Val = ((lac_var_t *) Val->Child)->Object;
+    lac_object_t *pNewVal;
+
+    switch (Val->Type) {
+        case LAC_VAR:
+            /* Not likely to happen */
+            printf("\n[ Warning ] Syntax Error, trying to assign value from a var-var\n");
+            g_env_reset();
+            return;
+        case LAC_INT:
+            switch (Addr->Type) {
+                case LAC_VAR:
+                    pNewVal = env_create_lac_int(((lac_int_t *) Val->Child)->iValue);
+                    env_set_lac_var(Addr, pNewVal);
+                    break;
+                case LAC_VEC:
+                    ((lac_vec_t *) Addr->Child)->pData[((lac_vec_t *) Addr->Child)->iRef] = ((lac_int_t *) Val->Child)->iValue;
+                    break;
+                default:
+                    printf("\n[ Warning ] Syntax Error, trying to assign value to a invariable object\n");
+                    g_env_reset();
+                    return;
+            }
 #ifdef DEBUG
-        printf("\n[ Debug ] A value %d is set to VMTable[%d]\n", iVal, iAddr);
-        fflush(stdout);
+            printf("\n[ Debug ] A value %d is set to %s\n", ((lac_int_t *) Val->Child)->iValue, Addr->Name);
+            fflush(stdout);
 #endif
-    } else {
-        /* This place of memory is not writable */
-        printf("\n[ Warning ] Illegal lac memory access");
-        g_proc_env_reset();
+            break;
+
+        case LAC_FUNC:
+            printf("\n[ Warning ] Syntax Error, trying to assign a func to var\n");
+            g_env_reset();
+            return;
+        case LAC_VEC:
+            switch (Addr->Type) {
+                case LAC_VAR:
+                    if (Val->iRefCnt == 0) {
+                        env_set_lac_var(Addr, Val);
+                    } else {
+                        pNewVal = env_create_lac_vec(NULL, 0, ((lac_vec_t *) Val->Child)->iLength, sizeof(int), ((lac_vec_t *) Val->Child)->pData);
+                        env_set_lac_var(Addr, pNewVal);
+                    }
+
+                    break;
+                default:
+                    printf("\n[ Warning ] Syntax Error, trying to assign value to a invariable object\n");
+                    g_env_reset();
+                    return;
+            }
+#ifdef DEBUG
+            printf("\n[ Debug ] A vector is set to %s\n", Addr->Name);
+            fflush(stdout);
+#endif
+        case LAC_CLASS:
+            /* [!] */
+            break;
     }
 }
 
 void proc_func_while() {
-    ;
+    /* [ while(JR) | x+4 | JR  | LOOP_END | ... | break(JR) | x+1 | ... |   loop   | WHILE_START |
+     * [    x      | x+1 | x+2 |   x+3    | ... |           |     | ... | LOOP_END |     x-1     |*/
+    proc_func_jr();
 }
 
 void proc_func_loop() {
@@ -348,54 +621,88 @@ void proc_func_break() {
 }
 
 void proc_func_jr() {
-    int iAddr = stack_pop_vm(&g_Env.StkReturn);
-    stack_push_vm(&g_Env.StkReturn, g_Env.VMTable.OpCodes[iAddr + 1]);
+    int iAddr = stack_pop_return(&g_Env.StkReturn);
+    lac_object_t *pLACObjectTmp = g_Env.pLACVMTable->Objects[iAddr + 1];
+    if (pLACObjectTmp->Type == LAC_VAR) pLACObjectTmp = ((lac_var_t *) pLACObjectTmp->Child)->Object;
+
+    if (pLACObjectTmp->Type != LAC_INT) {
+        printf("\n[ Warning ] Syntax Error, trying to do jump to a non-int destination\n");
+        g_env_reset();
+        return;
+    }
+    stack_push_return(&g_Env.StkReturn, ((lac_int_t *) (pLACObjectTmp->Child))->iValue);
+
 #ifdef DEBUG
-    printf("\n[ Debug ] Unconditional jump to %d from %d\n", g_Env.VMTable.OpCodes[iAddr + 1], iAddr);
+    printf("\n[ Debug ] Unconditional jump to %d from %d\n", ((lac_int_t *) (pLACObjectTmp->Child))->iValue, iAddr);
     fflush(stdout);
 #endif
 }
 
-void g_proc_env_init() {
+void g_env_init() {
     /* This function init the runtime environment */
-    vmtable_init(&g_Env.VMTable);
     hash_symtable_init(&g_Env.SymTable);
     stack_init(&g_Env.StkData);
     stack_init(&g_Env.StkReturn);
+    queue_init(&g_Env.Objects);
+    vmtable_init(&g_Env.BasicFuncTable);
+    g_Env.pQueRes = queue_create();
+    queue_init(g_Env.pQueRes);
     g_Env.bInited = TRUE;
 }
 
-void g_proc_env_reset() {
+void g_env_reset() {
     /* This function clear the data stack and return stack */
     stack_clear(&g_Env.StkData);
     stack_clear(&g_Env.StkReturn);
     hash_symtable_revert(&g_Env.SymTable);
-    vmtable_revert(&g_Env.VMTable);
+    queue_clear(g_Env.pQueRes);
     g_Env.bInited = TRUE;
 }
 
+void g_env_collect_garbage() {
+    /* Free every object that has 0 reference */
+    int iCnt = 0;
+    lac_object_t *pLACObjectTmp;
+    queue_node_t *pCursor = g_Env.Objects.pFront;
+    queue_node_t *pCursorOld;
+    while (pCursor != NULL) {
+        pLACObjectTmp = *(lac_object_t **) pCursor->pData;
+        pCursorOld = pCursor;
+        queue_next(&pCursor);
+        if (pLACObjectTmp->iRefCnt <= 0) {
+            queue_del_no_free(&g_Env.Objects, pCursorOld, NULL, FALSE);
+            /* Destroy the unused object */
+            destroy_lac_obj(pLACObjectTmp);
+            iCnt++;
+        }
+    }
+#ifdef DEBUG
+    printf("\n[ Info ] Garbage collection destroyed %d objects\n", iCnt);
+    fflush(stdout);
+#endif
 
-void g_proc_compile() {
+
+    ;
+}
+
+void g_env_compile() {
     /* The basic functions of processor need to be compiled in advance */
     /* The two tables (symtable and vmtable) are assumed as inited */
 
     /* Add the basic functions to SymTable and VMTable*/
-    if (g_Env.bInited != TRUE) g_proc_env_init();
+    if (g_Env.bInited != TRUE) g_env_init();
+    lac_object_t *pBasicFuncTmp;
 
     for (int idx = 0; idx < INIT_PROC_FUNC_NUM; ++idx) {
 
         /* modify the vm table */
-        vmtable_add(&g_Env.VMTable, g_proc_basic_func_type[idx], OP_CODE_INST);
-        vmtable_add(&g_Env.VMTable, idx, OP_CODE_INST);
+        pBasicFuncTmp = env_create_lac_func(g_proc_basic_func_name[idx], 0, g_Env.BasicFuncTable.iTail + 1, g_proc_basic_func_type[idx], g_proc_basic_func[idx]);
+        vmtable_add(&g_Env.BasicFuncTable, pBasicFuncTmp);
         /* modify the symbol table */
-        hash_symtable_add(&g_Env.SymTable, g_proc_basic_func_name[idx], (int) strlen(g_proc_basic_func_name[idx]), g_Env.VMTable.iTail - 1);
-        /* iLength -2 is the current  symbol's CFA (NOT VALID) */
-
+        hash_symtable_add_obj(&g_Env.SymTable, g_proc_basic_func_name[idx], (int) strlen(g_proc_basic_func_name[idx]), pBasicFuncTmp);
     }
-    g_Env.bCompiled = TRUE;
 
     /* Save the status of VMTable and StrTable */
     hash_symtable_checkout(&g_Env.SymTable);
-    vmtable_checkout(&g_Env.VMTable);
 }
 

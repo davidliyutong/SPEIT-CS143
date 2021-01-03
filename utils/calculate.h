@@ -6,7 +6,6 @@
 #define LAC_CALCULATE_H
 
 #include <stdio.h>
-#include <string.h>
 
 #include "../common/btree.h"
 #include "../common/macros.h"
@@ -31,11 +30,11 @@ exp_btnode_t *gen_exp_BTNode();
 
 int calculate_2_op_int(int iOperand1, int iOperand2, int *ans, char cOperator);
 
-int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes);
+int decode_exp(lac_queue_t *pQueSymbols, const char *sExpression, long lNumBytes);
 
-int gen_postfix_exp(lac_queue_t *pquePostfixExp, lac_queue_t *pqueSymbols);
+int gen_postfix_exp(lac_queue_t *pQuePostfixExp, lac_queue_t *pQueSymbols);
 
-int build_exp_tree(lac_queue_t *pquePostfixExp, exp_btnode_t *pExpTreeRoot);
+int build_exp_tree(lac_queue_t *pQuePostfixExp, exp_btnode_t *pExpTreeRoot);
 
 int calculate_exp_int(const char *sExpression, int iNumBytes, int *res);
 

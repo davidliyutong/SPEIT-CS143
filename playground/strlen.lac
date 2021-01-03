@@ -57,21 +57,22 @@ strcmp_str2 @ strlen strcmp_len2 ! drop
 variable strcmp_cnt 0 strcmp_cnt !
 variable strcmp_ans 1 strcmp_ans !
 
-strcmp_str1 @ strcmp_str2 @ = if 
+strcmp_len1 @ strcmp_len2 @ = if 
     while
     strcmp_str1 @ strcmp_cnt @ + strcmp_str2 @ strcmp_cnt @ + = if
     else
         0 strcmp_ans !
         break
     then
+    loop
 else
     0 strcmp_ans !
 then
 
-strcpy_str1 @ strcpy_str2 @ 0
+strcmp_str1 @ strcmp_str2 @ 0
 strcmp_ans @
 
 \ Data stack : [...| str1 | str2 | (str1 == str2)<- top
 ;
 
-strlen
+" Bonjour" strlen .

@@ -7,25 +7,53 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "../common/macros.h"
 #include "../common/stack.h"
-#include "symtable.h"
-#include "vmtable.h"
+#include "../common/object.h"
+#include "proc.h"
 
 typedef struct vmenv_t {
     lac_stack_t StkData;        // Data stack
     lac_stack_t StkReturn;      // Return stack
     hash_symtable_t SymTable;    // Table of symbols
-    vmtable_t VMTable;      // VM table
-    bool bCompiled;         // Flag
+    vmtable_t *pLACVMTable;      // pointer to VM table
+    vmtable_t BasicFuncTable;    // basic functions
     bool bInited;           // Flag
+    lac_queue_t *pQueRes;
+    lac_queue_t Objects;
 } vmenv_t;
 
 extern vmenv_t g_Env;
 
-int stack_push_vm(lac_stack_t *pStack, int iData);
 
-int stack_pop_vm(lac_stack_t *pStack);
+lac_object_t *env_create_lac_func(char *FuncNameStr, int iNameStrLength, int iCFA, e_vm_func_type FuncType, basic pFunc);
 
-int stack_top_vm(lac_stack_t *pStack);
+lac_object_t *env_create_lac_class(char *FuncNameStr, const int iNameStrLength, int iCFA, e_vm_func_type FuncType, basic pFunc);
 
-#endif //LAC_ENV_H
+lac_object_t *env_create_lac_int(int iValue);
+
+lac_object_t *env_create_lac_var(const char *VarNameStr, int iNameStrLength, lac_object_t *pLACObject);
+
+lac_object_t *env_create_lac_vec(const char *VecNameStr, int iNameStrLength, int iLength, int iSize, void *pData);
+
+bool env_set_lac_var(lac_object_t *pLACVAR, lac_object_t *pLACObject);
+
+bool env_instance_class(lac_object_t *pLACClass, lac_object_t *pLACInstance);
+
+int destroy_lac_obj(lac_object_t *pLACObject);
+
+//int reset_lac_obj(lac_object_t *pLACObject);
+
+bool stack_push_data(lac_stack_t *pStack, lac_object_t *pLACObject);
+
+lac_object_t *stack_pop_data(lac_stack_t *pStack);
+
+lac_object_t *stack_top_data(lac_stack_t *pStack);
+
+int stack_push_return(lac_stack_t *pStack, int iData);
+
+int stack_pop_return(lac_stack_t *pStack);
+
+int stack_top_return(lac_stack_t *pStack);
+
+#endif

@@ -26,20 +26,14 @@ void stack_init(lac_stack_t *pStack) {
     pStack->iLength = 0;
 }
 
-int stack_is_empty(lac_stack_t *pStack) {
+bool stack_is_empty(lac_stack_t *pStack) {
     /* Tell if a stack is empty, return TRUE if it is, FALSE if not */
 
     if (pStack->pTop == NULL) return TRUE;
     else return FALSE;
 }
 
-/* [!] */
-//int queue_push_front(lac_queue_t *queue, const void *pData) {
-//    /* This function enqueue pData at the front end */
-//    return ERR_NOT_IMPLEMENTED;
-//}
-
-int stack_push(lac_stack_t *pStack, void *pData, int iNumBytes) {
+bool stack_push(lac_stack_t *pStack, void *pData, int iNumBytes) {
     /* This function push pData at the rear end */
 
     /* Allocate memory */
@@ -61,7 +55,7 @@ int stack_push(lac_stack_t *pStack, void *pData, int iNumBytes) {
     return TRUE;
 }
 
-int stack_pop(lac_stack_t *pStack, void **pData) {
+bool stack_pop(lac_stack_t *pStack, void **pData) {
     /* This function pop the data(ptr) at the top end
      * This function will free the memory of stack node automatically
      */

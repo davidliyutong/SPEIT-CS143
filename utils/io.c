@@ -7,6 +7,7 @@
 
 int input_to_buffer(FILE *pInputFile, char **ppsReadBuffer) {
     /* This function read from pInputFile, write characters to ppsReadBuffer */
+    /* This function close the file */
 
     int iReadCnt;
     long lSize; // size of file
@@ -51,7 +52,7 @@ void assign_input_stream(int argc, const char *argv[], FILE **ppInputFile) {
     /* This function choose a input source (stdin or FILE) */
 
     if (argc < 2) {
-        *ppInputFile = (FILE *) stdin; // use stdin as input
+        *ppInputFile = stdin; // use stdin as input
     } else {
         *ppInputFile = fopen(argv[1], "r"); // open a file
         if (*ppInputFile == NULL) {

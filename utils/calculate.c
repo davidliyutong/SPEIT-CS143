@@ -41,7 +41,7 @@ inline int calculate_2_op_int(int iOperand1, int iOperand2, int *ans, char cOper
     }
 }
 
-int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes) {
+int decode_exp(lac_queue_t *pQueSymbols, const char *sExpression, long lNumBytes) {
     /* Decode expression */
     /* Input: mid-fix expression char; Output: queue of symbols in same order, but marked the information*/
 
@@ -60,7 +60,7 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             /* The number is encourtered */
 
             if (CalcStat == CALC_STAT_OP_PAR_RIGHT) {
-                printf("\n[ Warning ] Syntax error, <)>{<number>} not allowed\n");
+                printf("\n[ Warning ] Syntax Error, <)>{<number>} not allowed\n");
                 return CALC_STAT_ERR;
             }
             memset(cNumStrTmp, 0, MAX_NUMBER_LEN);
@@ -81,7 +81,7 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             NodeTmp.u_Value.iNumber = iNumValTmp; // Used for calculation
             NodeTmp.lNode = NodeTmp.rNode = NULL;
 
-            queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
+            queue_push_back(pQueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_NUMBER;
             continue; // We modified the idx, no need to increase idx in the while loop
         } else if (cTmp == '(') {
@@ -89,7 +89,7 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
 
             /* We forbid the {<number>|<)>}{<(>} combination */
             if (CalcStat == CALC_STAT_NUMBER || CalcStat == CALC_STAT_OP_PAR_RIGHT) {
-                printf("\n[ Warning ] Syntax error, {<number>|<)>}{<(>} not allowed\n");
+                printf("\n[ Warning ] Syntax Error, {<number>|<)>}{<(>} not allowed\n");
                 return CALC_STAT_ERR;
             }
 
@@ -97,14 +97,14 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             NodeTmp.u_Data.cOP = cTmp;
             NodeTmp.lNode = NodeTmp.rNode = NULL;
 
-            queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
+            queue_push_back(pQueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_OP_PAR_LEFT;
         } else if (cTmp == ')') {
             /* A ( is encountered */
 
             /* We forbid the <op>{<)>} combination */
             if (CalcStat == CALC_STAT_OP) {
-                printf("\n[ Warning ] Syntax error, <op>{<)>} not allowed\n");
+                printf("\n[ Warning ] Syntax Error, <op>{<)>} not allowed\n");
                 return CALC_STAT_ERR;
             }
 
@@ -112,18 +112,18 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             NodeTmp.u_Data.cOP = cTmp;
             NodeTmp.lNode = NodeTmp.rNode = NULL;
 
-            queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
+            queue_push_back(pQueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_OP_PAR_RIGHT;
         } else if (cTmp == '+' || cTmp == '-' || cTmp == 'x' || cTmp == '/') {
             /* Signed number handle: if the previous symble is '(' or operator, and a pseudo zero in the front */
             if ((CalcStat == CALC_STAT_BEGIN || CalcStat == CALC_STAT_OP || CalcStat == CALC_STAT_OP_PAR_LEFT) &&
                 (cTmp == '+' || cTmp == '-')) {
-                queue_push_back(pqueSymbols, (void *) &NodeZero, sizeof(exp_btnode_t)); // a signed number is encourtered, add zero
+                queue_push_back(pQueSymbols, (void *) &NodeZero, sizeof(exp_btnode_t)); // a signed number is encourtered, add zero
                 /* The node has a higher priority */
                 NodeTmp.type = CALC_OP_3;
             } else if ((CalcStat == CALC_STAT_OP || CalcStat == CALC_STAT_OP_PAR_LEFT) && (cTmp == '/' || cTmp == 'x')) {
                 /* We forbid the {<op>|<(>}{<x>|</>} combination */
-                printf("\n[ Warning ] Syntax error, {<op>|<(>}{<x>|</>} not allowed\n");
+                printf("\n[ Warning ] Syntax Error, {<op>|<(>}{<x>|</>} not allowed\n");
                 return CALC_STAT_ERR;
             } else {
                 /* Normal case */
@@ -138,7 +138,7 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
             NodeTmp.u_Data.cOP = cTmp;
             NodeTmp.lNode = NodeTmp.rNode = NULL;
 
-            queue_push_back(pqueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
+            queue_push_back(pQueSymbols, (void *) &NodeTmp, sizeof(exp_btnode_t));
             CalcStat = CALC_STAT_OP;
         } else if (cTmp == ' ') {
             ++idx;
@@ -148,7 +148,7 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
                 break;
             }
             CalcStat = CALC_STAT_ERR;
-            printf("\n[ Warning ] Syntax error, illegal character: %c\n", cTmp);
+            printf("\n[ Warning ] Syntax Error, illegal character: %c\n", cTmp);
             return CalcStat;
         }
         ++idx;
@@ -157,7 +157,7 @@ int decode_exp(lac_queue_t *pqueSymbols, const char *sExpression, long lNumBytes
     return CalcStat;
 }
 
-int gen_postfix_exp(lac_queue_t *pquePostfixExp, lac_queue_t *pqueSymbols) {
+int gen_postfix_exp(lac_queue_t *pQuePostfixExp, lac_queue_t *pQueSymbols) {
     /* Generate post-fix expression from a mid-fix expression (symbols) */
     /* Use stack to achieve the goal */
     /* The symbol queue will be cleared */
@@ -167,12 +167,12 @@ int gen_postfix_exp(lac_queue_t *pquePostfixExp, lac_queue_t *pqueSymbols) {
     stack_init(&stkOp);
     exp_btnode_t SymbolTmp;
     exp_btnode_t OpTmp;
-    while (!queue_is_empty(pqueSymbols)) {
-        queue_pop_front(pqueSymbols, (void *) &SymbolTmp); // scan the queue, pick a symbol,
+    while (!queue_is_empty(pQueSymbols)) {
+        queue_pop_front(pQueSymbols, (void *) &SymbolTmp); // scan the queue, pick a symbol,
 
         if (SymbolTmp.type == CALC_NUMBER) {
             /* If it is a number, push it in the postfix expression */
-            queue_push_back(pquePostfixExp, (void *) &SymbolTmp, sizeof(exp_btnode_t)); // If it is a number, enque
+            queue_push_back(pQuePostfixExp, (void *) &SymbolTmp, sizeof(exp_btnode_t)); // If it is a number, enqueue
         } else if (SymbolTmp.type == CALC_OP_PAR_LEFT) {
             /* If it is a '(', push it in to the operator stack */
             stack_push(&stkOp, (void *) &SymbolTmp, sizeof(exp_btnode_t));
@@ -184,7 +184,7 @@ int gen_postfix_exp(lac_queue_t *pquePostfixExp, lac_queue_t *pqueSymbols) {
                     /* Drop the '(' */
                     break;
                 } else {
-                    queue_push_back(pquePostfixExp, (void *) &OpTmp, sizeof(exp_btnode_t));
+                    queue_push_back(pQuePostfixExp, (void *) &OpTmp, sizeof(exp_btnode_t));
                 }
                 if (stack_is_empty(&stkOp)) {
                     /* parenthese not match, this is an error */
@@ -203,7 +203,7 @@ int gen_postfix_exp(lac_queue_t *pquePostfixExp, lac_queue_t *pqueSymbols) {
                 while (!stack_is_empty(&stkOp)) {
                     stack_pop(&stkOp, (void *) &OpTmp);
                     if (OpTmp.type >= SymbolTmp.type) {
-                        queue_push_back(pquePostfixExp, (void *) &OpTmp, sizeof(exp_btnode_t));
+                        queue_push_back(pQuePostfixExp, (void *) &OpTmp, sizeof(exp_btnode_t));
                     } else {
                         stack_push(&stkOp, (void *) &OpTmp, sizeof(exp_btnode_t));
                         break;
@@ -222,7 +222,7 @@ int gen_postfix_exp(lac_queue_t *pquePostfixExp, lac_queue_t *pqueSymbols) {
             printf("\n[ Warning ] Unclosed parenthese (\n");
             return CALC_STAT_ERR;
         }
-        queue_push_back(pquePostfixExp, (void *) &OpTmp, sizeof(exp_btnode_t));
+        queue_push_back(pQuePostfixExp, (void *) &OpTmp, sizeof(exp_btnode_t));
     }
 
     stack_clear(&stkOp); /* Free up memory */
@@ -230,7 +230,7 @@ int gen_postfix_exp(lac_queue_t *pquePostfixExp, lac_queue_t *pqueSymbols) {
     return CalcStat;
 }
 
-int build_exp_tree(lac_queue_t *pquePostfixExp, exp_btnode_t *pExpTreeRoot) {
+int build_exp_tree(lac_queue_t *pQuePostfixExp, exp_btnode_t *pExpTreeRoot) {
     /* The postfix expression queue will not be modified */
 
     enum calculator_stat CalcStat = CALC_STAT_BEGIN;
@@ -247,7 +247,7 @@ int build_exp_tree(lac_queue_t *pquePostfixExp, exp_btnode_t *pExpTreeRoot) {
     bool bFlag = FALSE; // used to determine the end of queue
 
     /* Use a while loop to read the queue */
-    queue_node_t *pPostfixNodeTmp = pquePostfixExp->pFront;
+    queue_node_t *pPostfixNodeTmp = pQuePostfixExp->pFront;
     while (TRUE) {
         pPostfixSymbolTmp = (exp_btnode_t *) pPostfixNodeTmp->pData; // The pointer points to a place in the queue (Data)
         switch (pPostfixSymbolTmp->type) {

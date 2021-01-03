@@ -8,16 +8,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../common/macros.h"
+#include "../common/cfa.h"
 #include "../utils/calculate.h"
 #include "env.h"
-#include "symtable.h"
-#include "vmtable.h"
+
+#define INIT_PROC_FUNC_NUM 27
 
 extern void (*g_proc_basic_func[INIT_PROC_FUNC_NUM])();
 
 extern char g_proc_basic_func_name[INIT_PROC_FUNC_NUM][10];
 
-extern int g_proc_basic_func_type[INIT_PROC_FUNC_NUM];
+extern e_vm_func_type g_proc_basic_func_type[INIT_PROC_FUNC_NUM];
 
 void proc_func_dup();
 
@@ -49,6 +50,8 @@ void proc_func_lit();
 
 void proc_func_fin();
 
+void proc_func_lac();
+
 void proc_func_calculate();
 
 void proc_func_if();
@@ -71,12 +74,14 @@ void proc_func_break();
 
 void proc_func_jr();
 
-void g_proc_env_init();
+void g_env_init();
 
-void g_proc_env_reset();
+void g_env_reset();
+
+void g_env_collect_garbage();
 
 //void g_proc_env_clear();
 
-void g_proc_compile();
+void g_env_compile();
 
 #endif //LAC_PROC_H

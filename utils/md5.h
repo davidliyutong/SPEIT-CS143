@@ -5,8 +5,8 @@
 #ifndef LAC_MD5_H
 #define LAC_MD5_H
 
+#ifdef USE_MD5
 #include <memory.h>
-#include <string.h>
 
 typedef struct MD5_CTX {
     unsigned int Count[2];
@@ -42,7 +42,7 @@ typedef struct MD5_CTX {
           { \
           (a) += I(b,c,d) + (x) + (ac); \
           (a) = ROTATE_LEFT(a,s); \
-          (a) += b; \
+          (a) += (b); \
           }
 
 void MD5Init(MD5_CTX *context);
@@ -56,5 +56,5 @@ void MD5Transform(unsigned int state[4], const unsigned char block[64]);
 void MD5Encode(unsigned char *output, const unsigned int *input, unsigned int len);
 
 void MD5Decode(unsigned int *output, const unsigned char *input, unsigned int len);
-
+#endif
 #endif

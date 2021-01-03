@@ -13,6 +13,8 @@ typedef enum bool {
     FALSE = 0,
 } bool;
 
+typedef int status;
+
 typedef void (*basic)(void);
 
 #endif

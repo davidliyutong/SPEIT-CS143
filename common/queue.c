@@ -185,7 +185,7 @@ int queue_pop_back(lac_queue_t *pQueue, void *pData) {
     }
 
     if (pData != NULL) {
-        memcpy(pData, pQueue->pFront->pData, (size_t) pQueue->pFront->iNumBytes);
+        memcpy(pData, pQueue->pRear->pData, (size_t) pQueue->pRear->iNumBytes);
     }
 
     queue_node_t *pNodeTmp = pQueue->pRear;
@@ -214,7 +214,7 @@ int queue_pop_back_no_free(lac_queue_t *pQueue, void *pData) {
     }
 
     if (pData != NULL) {
-        memcpy(pData, pQueue->pFront->pData, (size_t) pQueue->pFront->iNumBytes);
+        memcpy(pData, pQueue->pRear->pData, (size_t) pQueue->pRear->iNumBytes);
     }
 
     queue_node_t *pNodeTmp = pQueue->pRear;
@@ -234,9 +234,12 @@ int queue_pop_back_no_free(lac_queue_t *pQueue, void *pData) {
 }
 
 
-int queue_del(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData) {
+int queue_del(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData, bool Check) {
+    /* This function removes a node from a queue */
     if (pNode == NULL) return FALSE;
-    if (!queue_has_node(pQueue, pNode)) return FALSE;
+    if (Check == TRUE) {
+        if (!queue_has_node(pQueue, pNode)) return FALSE;
+    }
 
     if (pNode == pQueue->pFront) {
         queue_pop_front(pQueue, pData);
@@ -259,15 +262,19 @@ int queue_del(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData) {
 }
 
 
-int queue_del_no_free(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData) {
+int queue_del_no_free(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData, bool Check) {
+    /* This function removes a node from a queue, but dont free its data, incase the data is a dynamic structure */
     if (pNode == NULL) return FALSE;
-    if (!queue_has_node(pQueue, pNode)) return FALSE;
+    if (Check == TRUE) {
+        if (!queue_has_node(pQueue, pNode)) return FALSE;
+
+    }
 
     if (pNode == pQueue->pFront) {
-        queue_pop_front(pQueue, pData);
+        queue_pop_front_no_free(pQueue, pData);
         return TRUE;
     } else if (pNode == pQueue->pRear) {
-        queue_pop_back(pQueue, pData);
+        queue_pop_back_no_free(pQueue, pData);
         return TRUE;
     } else {
         pNode->pPrev->pNext = pNode->pNext;

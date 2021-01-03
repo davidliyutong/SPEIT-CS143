@@ -5,10 +5,14 @@
 #ifndef LAC_HASH_H
 #define LAC_HASH_H
 
+#ifdef USE_MD5
 #include "md5.h"
+#endif
+
+#include <string.h>
 
 int hash33(void *input, int iCnt, int iSize);
 
-unsigned int str_to_md5hash(unsigned char *input);
+unsigned int str_to_hash(unsigned char *input);
 
 #endif //LAC_HASH_H

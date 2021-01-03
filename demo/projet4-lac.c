@@ -8,10 +8,12 @@
 #include "../runtime/interpret.h"
 
 int main() {
-    g_proc_env_init();
-    g_proc_compile();
-    disp_vmtable(&g_Env.VMTable);
+    g_env_init();
+    g_env_compile();
+    disp_vmtable(&g_Env.BasicFuncTable);
     disp_symtable(&g_Env.SymTable);
+    compile_stat_t CompileStat = {FALSE, FALSE, FALSE};
+
 
     char *psReadBuffer = NULL;
     FILE *pInputFile;
@@ -29,11 +31,13 @@ int main() {
     visualize(psReadBuffer, &queRes);
     fflush(stdout);
 
-    interpret(psReadBuffer, &queRes);
+    interpret(&queRes, CompileStat);
 
-    printf("\n[ Info ] After the execution, the VM table and symble table are: \n");
-    disp_vmtable(&g_Env.VMTable);
+    printf("\n[ Info ] After the execution, the symbol table is: \n");
     disp_symtable(&g_Env.SymTable);
+    disp_objects(&g_Env.Objects);
+    g_env_collect_garbage();
+    disp_objects(&g_Env.Objects);
 
     return 0;
 

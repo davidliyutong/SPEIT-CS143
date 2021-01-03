@@ -4,19 +4,16 @@
 #include <stdio.h>
 #include <string.h>
 #include "common/types.h"
-#include "common/macros.h"
 #include "lex/analex.h"
 #include "runtime/interpret.h"
 
 int main(int argc, const char *argv[]) {
 //    extern vmenv_t g_Env;
-    g_proc_env_init();
-    g_proc_compile();
+    g_env_init();
+    g_env_compile();
     bool bOutputInfo = FALSE;
-    lac_queue_t queRes;
-    queue_init(&queRes);
     int iReadCnt;
-
+    compile_stat_t CompileStat = {FALSE, FALSE, FALSE};
     /* */
     switch (argc) {
         case 3: {
@@ -31,20 +28,21 @@ int main(int argc, const char *argv[]) {
             FILE *pInputFile;
             pInputFile = fopen(argv[1], "r");
             iReadCnt = input_to_buffer(pInputFile, &psReadBuffer);
-            match_lac(psReadBuffer, psReadBuffer + iReadCnt, &queRes);
+            match_lac(psReadBuffer, psReadBuffer + iReadCnt, g_Env.pQueRes);
 
 #ifdef DEBUG
             bOutputInfo = TRUE;
 #endif
 
             if (bOutputInfo) {
-                disp_vmtable(&g_Env.VMTable);
+                disp_vmtable(&g_Env.BasicFuncTable);
                 disp_symtable(&g_Env.SymTable);
-                disp_annalex_res(psReadBuffer, &queRes);
-                visualize(psReadBuffer, &queRes);
+                disp_annalex_res(psReadBuffer, g_Env.pQueRes);
+                visualize(psReadBuffer, g_Env.pQueRes);
                 fflush(stdout);
             }
-            interpret(psReadBuffer, &queRes);
+            interpret(g_Env.pQueRes, CompileStat);
+            g_env_collect_garbage();
             free(psReadBuffer);
         }
         case 1: {
@@ -58,13 +56,15 @@ int main(int argc, const char *argv[]) {
             memset(sInputBuffer, 0, sizeof(char) * MAX_INPUT_LEN);
             sInputBuffer[0] = '\n'; // Manually add a return character to the line start
             printf(">>>");
-            while (fgets(sInputBuffer + 1, MAX_INPUT_LEN, (FILE *) stdin) != NULL) {
+            while (fgets(sInputBuffer + 1, MAX_INPUT_LEN, stdin) != NULL) {
                 iReadCnt = (int) strlen(sInputBuffer);
-                match_lac(sInputBuffer, sInputBuffer + iReadCnt, &queRes);
-                interpret(sInputBuffer, &queRes);
+                match_lac(sInputBuffer, sInputBuffer + iReadCnt, g_Env.pQueRes);
+                interpret(g_Env.pQueRes, CompileStat);
+                g_env_collect_garbage();
+
 
                 /* After interpret, clear queue and input Buffer */
-                queue_clear(&queRes);
+                queue_clear(g_Env.pQueRes);
                 memset(sInputBuffer, 0, sizeof(char) * MAX_INPUT_LEN);
                 sInputBuffer[0] = '\n'; // Manually add a return character to the line start
                 printf("\n>>>");

@@ -10,28 +10,14 @@
 #include "../common/stack.h"
 #include "../common/types.h"
 #include "../lex/analex.h"
-#include "../runtime/symtable.h"
-#include "../runtime/vmtable.h"
 #include "../utils/calculate.h"
 #include "env.h"
 #include "proc.h"
 #include "function.h"
+#include "../common/cfa.h"
 
-typedef enum e_interpret_keyword {
-    INTERPRET_DEF, // :
-    INTERPRET_DEFER,
-    INTERPRET_LINK,
-    INTERPRET_VAR,
-    INTERPRET_VEC,
-    INTERPRET_IMPORT,
-    INTERPRET_EXIT,
-    INTERPRET_DEFAULT
-} e_interpret_stat;
+void exec_vm(lac_object_t *pLACFunctionObject);
 
-enum e_interpret_keyword match_keyword(char *psReadBuffer, struct lexeme_t LexTmp);
-
-void exec_vm(int iCFA);
-
-void interpret(char *psReadBuffer, lac_queue_t *pqueRes);
+void interpret(lac_queue_t *pQueRes, compile_stat_t CompileStat);
 
 #endif //LAC_INTERPRET_H

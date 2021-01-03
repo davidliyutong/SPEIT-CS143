@@ -25,11 +25,11 @@ lac_stack_t *stack_create();
 
 void stack_init(lac_stack_t *pStack);
 
-int stack_is_empty(lac_stack_t *pStack);
+bool stack_is_empty(lac_stack_t *pStack);
 
-int stack_push(lac_stack_t *pStack, void *pData, int iNumBytes);
+bool stack_push(lac_stack_t *pStack, void *pData, int iNumBytes);
 
-int stack_pop(lac_stack_t *pStack, void **pData);
+bool stack_pop(lac_stack_t *pStack, void **pData);
 
 void stack_destroy(lac_stack_t *pStack);
 
