@@ -3,7 +3,6 @@
 //
 // Function used to execute LAC
 
-#include <tcl.h>
 # include "interpret.h"
 
 void exec_vm(lac_object_t *pLACFunctionObject) {
@@ -152,14 +151,19 @@ void import_extern_lib(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     lexeme_t ModuleName;
     lexeme_t AsTmp;
     queue_pop_front(pQueRes, (void *) &FileName);
-    queue_pop_front(pQueRes, (void *) &AsTmp);
-    /* import ... as ... or import ... */
-    if (strncmp(AsTmp.pString, "as", 2) == 0 && AsTmp.iLength == 2) {
-        queue_pop_front(pQueRes, (void *) &ModuleName);
-    } else {
-        queue_push_front(pQueRes, (void *) &AsTmp, sizeof(lexeme_t));
+    if (queue_is_empty(pQueRes) == TRUE) {
         ModuleName = FileName;
+    } else {
+        queue_pop_front(pQueRes, (void *) &AsTmp);
+        /* import ... as ... or import ... */
+        if (strncmp(AsTmp.pString, "as", 2) == 0 && AsTmp.iLength == 2) {
+            queue_pop_front(pQueRes, (void *) &ModuleName);
+        } else {
+            queue_push_front(pQueRes, (void *) &AsTmp, sizeof(lexeme_t));
+            ModuleName = FileName;
+        }
     }
+
 
     hash_table_query_res SymbolQueryRes;
     SymbolQueryRes = hash_symtable_search_all(ModuleName, CompileStat);

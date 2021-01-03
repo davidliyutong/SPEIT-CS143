@@ -414,11 +414,12 @@ void declare_function(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
 #ifdef DEBUG
         printf("\n[ Debug ] Declare function %.*s\n", iLength, LexemeStrTmp);
         fflush(stdout);
+#endif
         if (CompileStat.pFuncCurr != NULL) {
             hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, LexemeStrTmp, iLength, pLACObjectTmp);
             hash_symtable_checkout(&CompileStat.pFuncCurr->SymTable);
         }
-#endif
+
     } else {
         printf("\n[ Info ] Semantic risk of (defer), Duplicate declearation, previous definition will be replaced\n");
         /* Local variable in local symbol table */
@@ -575,12 +576,13 @@ void declare_var(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
         printf("\n[ Debug ] A variable %s is defined]\n", LexemeStrTmp);
+#endif
         if (CompileStat.pFuncCurr != NULL) {
             /* Not in mode interpret */
             hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, VarName.pString, VarName.iLength, pLACObjectTmp);
             hash_symtable_checkout(&CompileStat.pFuncCurr->SymTable);
         }
-#endif
+
     } else {
         printf("\n[ Info ] Semantic risk of (var), Duplicate definition, previous definition will be replaced\n");
         /* Local variable in local symbol table */
@@ -644,12 +646,13 @@ void declare_vec(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     } else if (iRet == INFO_SYMBOL_NOT_FOUND) {
 #ifdef DEBUG
         printf("\n[ Debug ] A vector %.*s is defined\n", VecName.iLength, VecName.pString);
+#endif
         if (CompileStat.pFuncCurr != NULL) {
             /* Not in mode interpret */
             hash_symtable_add_obj(&CompileStat.pFuncCurr->SymTable, VecName.pString, VecName.iLength, pLACObjectTmp);
             hash_symtable_checkout(&g_Env.SymTable);
         }
-#endif
+
     } else {
         printf("\n[ Info ] Semantic risk of (vec), Duplicate definition, previous definition will be replaced\n");
         if (CompileStat.pFuncCurr != NULL) {
