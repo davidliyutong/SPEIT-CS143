@@ -16,7 +16,7 @@ $ cmake -DCMAKE_BUILD_TYEPE=Debug ${PATH_TO_PROJECT}
 $ make
 ```
 
-![compile-cmake](./misc/img/compile-cmake.png)
+![compile-cmake](https://github.com/davidliyutong/CS143/blob/main/misc/img/compile-cmake.png?raw=true)
 
 or the `build.sh` script:
 
@@ -27,7 +27,7 @@ $ ./build.sh
 [ Info ] Enable Debug Mode? [Y/n]:
 ```
 
-![compile-cmake](./misc/img/compile-script.png)
+![compile-cmake](https://github.com/davidliyutong/CS143/blob/main/misc/img/compile-script.png?raw=true)
 
 The variable `PROJET_DIR` **must** be set to project directory correctly by `export`.
 
