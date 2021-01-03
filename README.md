@@ -66,7 +66,7 @@ $ cmake -DCMAKE_BUILD_TYEPE=Release ${PATH_TO_PROJECT}
 
 Release version has `-O3` option enabled, output debug informations are switched off
 
-Rebug version outputs useful debug information
+Debug version outputs useful debug information
 
 ## Report
 
