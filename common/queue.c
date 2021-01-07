@@ -38,12 +38,12 @@ int queue_is_empty(lac_queue_t *pQueue) {
 int queue_has_node(lac_queue_t *pQueue, struct queue_node_t *pNode) {
     if (queue_is_empty(pQueue)) return FALSE;
     queue_node_t *Cursor = pQueue->pFront;
-    do {
+    while (Cursor != NULL) {
         if (Cursor == pNode) {
             return TRUE;
         }
-        queue_next(Cursor);
-    } while (Cursor != NULL);
+        queue_next(&Cursor);
+    }
     return FALSE;
 }
 
@@ -242,10 +242,10 @@ int queue_del(lac_queue_t *pQueue, struct queue_node_t *pNode, void *pData, bool
     }
 
     if (pNode == pQueue->pFront) {
-        queue_pop_front(pQueue, pData);
+        queue_pop_front_no_free(pQueue, pData);
         return TRUE;
     } else if (pNode == pQueue->pRear) {
-        queue_pop_back(pQueue, pData);
+        queue_pop_back_no_free(pQueue, pData);
         return TRUE;
     } else {
         pNode->pPrev->pNext = pNode->pNext;
@@ -308,28 +308,29 @@ void queue_clear(lac_queue_t *pQueue) {
     pQueue->iLength = 0;
 }
 
-void queue_next(queue_node_t *pNode) {
+void queue_next(queue_node_t **ppNode) {
     /* Return the pointer of next node in the queue */
     /* This function can be used to access queue nodes 1-by-1 with out pop them */
 
-    queue_node_t *pRet = pNode->pNext;
-    if (pRet == pNode) {
+    queue_node_t *pRet = (*ppNode)->pNext;
+    if (pRet == (*ppNode)) {
         /* It is the end of the queue */
-        pNode = NULL;
+        *ppNode = NULL;
     } else {
-        pNode = pRet;
+        *ppNode = pRet;
     }
 }
 
-void queue_prev(queue_node_t *pNode) {
+void queue_prev(queue_node_t **ppNode) {
     /* Return the pointer of previous node in the queue */
     /* This function can be used to access queue nodes 1-by-1 with out pop them */
 
-    queue_node_t *pRet = pNode->pPrev;
-    if (pRet == pNode) {
+    queue_node_t *pRet = (*ppNode)->pPrev;
+
+    if (pRet == (*ppNode)) {
         /* It is the end of the queue */
-        pNode = NULL;
+        *ppNode = NULL;
     } else {
-        pNode = pRet;
+        *ppNode = pRet;
     }
 }
