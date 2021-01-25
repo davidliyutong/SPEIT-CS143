@@ -1,7 +1,12 @@
 //
 // Created by 厉宇桐 on 2020/12/23.
 //
-
+/**@file  env.h
+* @brief    LAC environment 
+* @details  
+* @author      厉宇桐
+* @date        2020/12/23
+*/
 #ifndef LAC_ENV_H
 #define LAC_ENV_H
 
@@ -12,15 +17,18 @@
 #include "../common/object.h"
 #include "proc.h"
 
+/** @struct vmenv_t
+ * @brief This struct stores the LAC execution environment
+ */
 typedef struct vmenv_t {
-    lac_stack_t StkData;        // Data stack
-    lac_stack_t StkReturn;      // Return stack
-    hash_symtable_t SymTable;    // Table of symbols
-    vmtable_t *pLACVMTable;      // pointer to VM table
-    vmtable_t BasicFuncTable;    // basic functions
-    bool bInited;           // Flag
-    lac_queue_t *pQueRes;
-    lac_queue_t Objects;
+    lac_stack_t StkData;        /// Data stack
+    lac_stack_t StkReturn;      /// Return stack
+    hash_symtable_t SymTable;   /// Table of symbols, global
+    vmtable_t *pLACVMTable;     /// pointer to the VM table of certain lac function
+    vmtable_t BasicFuncTable;   /// VM table of basic functions
+    bool bInited;               /// Flag. TRUE if the environment is inited
+    lac_queue_t *pQueRes;       /// Queue to store lexical analyse results
+    lac_queue_t Objects;        /// Queue stores all dynamically created objects
 } vmenv_t;
 
 extern vmenv_t g_Env;

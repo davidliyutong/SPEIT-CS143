@@ -670,7 +670,7 @@ void g_env_collect_garbage() {
         pCursorOld = pCursor;
         queue_next(&pCursor);
         if (pLACObjectTmp->iRefCnt <= 0) {
-            queue_del_no_free(&g_Env.Objects, pCursorOld, NULL, FALSE);
+            queue_del(&g_Env.Objects, pCursorOld, NULL, FALSE, FALSE    );
             /* Destroy the unused object */
             destroy_lac_obj(pLACObjectTmp);
             iCnt++;

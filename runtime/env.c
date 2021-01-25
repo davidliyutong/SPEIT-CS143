@@ -4,8 +4,15 @@
 
 #include "env.h"
 
+/** @brief @var Global environment */
 vmenv_t g_Env = {0};
 
+/** @brief Dedicated function to push data into data stack
+ * 
+ * @param pStack Data stack
+ * @param pLACObject data object
+ * @return A bool value of status code
+ */
 bool stack_push_data(lac_stack_t *pStack, lac_object_t *pLACObject) {
     bool iRet;
     iRet = stack_push(pStack, (void *) &pLACObject, sizeof(lac_object_t *));
@@ -38,6 +45,11 @@ bool stack_push_data(lac_stack_t *pStack, lac_object_t *pLACObject) {
     }
 }
 
+/** @brief Dedicated function to pop data from data stack
+ * 
+ * @param pStack Data stack
+ * @return lac_object, the popped data
+ */
 lac_object_t *stack_pop_data(lac_stack_t *pStack) {
     bool iRet;
     lac_object_t *pRes;
@@ -57,6 +69,11 @@ lac_object_t *stack_pop_data(lac_stack_t *pStack) {
     }
 }
 
+/** @brief Dedicated function to access top of data stack
+ * 
+ * @param pStack Data stack
+ * @return lac_object, the data at top
+ */
 lac_object_t *stack_top_data(lac_stack_t *pStack) {
     /* Access the top of stack without pop */
     lac_object_t *pRes;
@@ -68,7 +85,12 @@ lac_object_t *stack_top_data(lac_stack_t *pStack) {
         return *(lac_object_t **) (pStack->pTop->pData);
     }
 }
-
+/** @brief Dedicated function to push CFA into return stack
+ * 
+ * @param pStack Data stack
+ * @param iData CFA
+ * @return A bool value of status code
+ */
 inline int stack_push_return(lac_stack_t *pStack, int iData) {
     /* special push method dedicated for VM(int) */
 #ifdef DEBUG
@@ -83,6 +105,11 @@ inline int stack_push_return(lac_stack_t *pStack, int iData) {
     return TRUE;
 }
 
+/** @brief Dedicated function to pop CFA from return stack
+ * 
+ * @param pStack Data stack
+ * @return lac_object, the popped CFA
+ */
 inline int stack_pop_return(lac_stack_t *pStack) {
     /* special pop method dedicated for VM(int) */
 
@@ -107,6 +134,11 @@ inline int stack_pop_return(lac_stack_t *pStack) {
     return iRes;
 }
 
+/** @brief Dedicated function to access top of return stack
+ * 
+ * @param pStack Data stack
+ * @return int, the CFA at top
+ */
 inline int stack_top_return(lac_stack_t *pStack) {
     /* Access the top of stack without pop */
 
@@ -118,6 +150,15 @@ inline int stack_top_return(lac_stack_t *pStack) {
     }
 }
 
+/** @brief Create new lac_func object, register it to object manager
+ *
+ * @param FuncNameStr Name string
+ * @param iNameStrLength strlen(FuncNameStr)
+ * @param iCFA CFA of function
+ * @param FuncType Type of function
+ * @param pFunc Function pointer
+ * @return 
+ */
 lac_object_t *env_create_lac_func(char *FuncNameStr, const int iNameStrLength, int iCFA, e_vm_func_type FuncType, basic pFunc) {
     /* Create a new lac function */
     lac_object_t *pNewObject = calloc(1, sizeof(lac_object_t));
@@ -147,8 +188,8 @@ lac_object_t *env_create_lac_func(char *FuncNameStr, const int iNameStrLength, i
 
     pNewObject->Child = pNewFunc;
     pNewFunc->iCFA = iCFA;
-    pNewFunc->FuncType = FuncType;
-    if (pFunc != NULL && pNewFunc->FuncType != VM_FUNC_LAC) pNewFunc->pFunc = pFunc;
+    pNewFunc->Type = FuncType;
+    if (pFunc != NULL && pNewFunc->Type != VM_FUNC_LAC) pNewFunc->pFunc = pFunc;
     vmtable_init(&pNewFunc->VMTable);
     hash_symtable_init(&pNewFunc->SymTable);
 
@@ -157,12 +198,27 @@ lac_object_t *env_create_lac_func(char *FuncNameStr, const int iNameStrLength, i
     return pNewObject;
 }
 
+/** @brief Create new lac_class object, register it to object manager
+ *
+ * @param FuncNameStr Name string
+ * @param iNameStrLength strlen(FuncNameStr)
+ * @param iCFA CFA of function
+ * @param FuncType Type of function
+ * @param pFunc Function pointer
+ * @return 
+ * @remark Same as env_create_lac_func, since lac_class and lac_func are same
+ */
 lac_object_t *env_create_lac_class(char *FuncNameStr, const int iNameStrLength, int iCFA, e_vm_func_type FuncType, basic pFunc) {
     lac_object_t *pNewObject = env_create_lac_func(FuncNameStr, iNameStrLength, iCFA, FuncType, pFunc);
     pNewObject->Type = LAC_CLASS;
     return pNewObject;
 }
 
+/** @brief Create new lac_int object, register it to object manager
+ * 
+ * @param iValue INT value
+ * @return New object
+ */
 lac_object_t *env_create_lac_int(int iValue) {
     /* Create a new lac object int */
     lac_object_t *pNewObject = calloc(1, sizeof(lac_object_t));
@@ -190,6 +246,15 @@ lac_object_t *env_create_lac_int(int iValue) {
     return pNewObject;
 }
 
+/** @brief Create new lac_vec object, register to object manager
+ * 
+ * @param VecNameStr Name of vector
+ * @param iNameStrLength strlen(VecNameStr)
+ * @param iLength Length of string
+ * @param iSize Data sive
+ * @param pData Content of vector
+ * @return 
+ */
 lac_object_t *env_create_lac_vec(const char *VecNameStr, int iNameStrLength, int iLength, int iSize, void *pData) {
     /* Create a lac vector */
     lac_object_t *pNewObject = calloc(1, sizeof(lac_object_t));
@@ -259,6 +324,13 @@ lac_object_t *env_create_lac_vec(const char *VecNameStr, int iNameStrLength, int
     return pNewObject;
 }
 
+/** Create lac_var object, register to object manager
+ * 
+ * @param VarNameStr Variable name
+ * @param iNameStrLength strlen(VarNameStr)
+ * @param pLACObject The object that variable points to
+ * @return 
+ */
 lac_object_t *env_create_lac_var(const char *VarNameStr, int iNameStrLength, lac_object_t *pLACObject) {
     /* Create a lac variable */
     lac_object_t *pNewObject = calloc(1, sizeof(lac_object_t));
@@ -302,6 +374,13 @@ lac_object_t *env_create_lac_var(const char *VarNameStr, int iNameStrLength, lac
     return pNewObject;
 }
 
+/** Set the created var's contend(reference)
+ * 
+ * @param pLACVAR The variable
+ * @param pLACObject New value
+ * @return 
+ * #remark A bool value, status code
+ */
 bool env_set_lac_var(lac_object_t *pLACVAR, lac_object_t *pLACObject) {
     if (pLACVAR->Type != LAC_VAR) return FALSE;
 
@@ -321,6 +400,13 @@ bool env_set_lac_var(lac_object_t *pLACVAR, lac_object_t *pLACObject) {
     return TRUE;
 }
 
+/** @brief Gnerate lac instance from class
+ * 
+ * @param pLACClass The class
+ * @param pLACInstance The instance
+ * @return  A bool value, status code
+ * @remark The instance must be created in advance
+ */
 bool env_instance_class(lac_object_t *pLACClass, lac_object_t *pLACInstance) {
     /* Create a new lac function from class*/
     if (pLACClass == NULL || pLACInstance == NULL) {
@@ -334,7 +420,7 @@ bool env_instance_class(lac_object_t *pLACClass, lac_object_t *pLACInstance) {
 
     /* Init the new instance */
     pFunc->iCFA = VM_CFA_LAC;
-    pFunc->FuncType = VM_FUNC_LAC;
+    pFunc->Type = VM_FUNC_LAC;
 
     /* Reset the instance */
     vmtable_clear(&pFunc->VMTable);
@@ -342,10 +428,10 @@ bool env_instance_class(lac_object_t *pLACClass, lac_object_t *pLACInstance) {
 
     /* Copy the field of class to instance */
     queue_node_t *pCursor;
-    hash_table_entry *pOldEntryTmp;
+    hash_table_entry_t *pOldEntryTmp;
     lac_object_t *pCurrObject;
     lac_object_t *pLACObjectTmp;
-    hash_table_entry *pEntryTmp;
+    hash_table_entry_t *pEntryTmp;
 
     for (int idx = 0; idx <= pClass->VMTable.iTail; idx++) {
         vmtable_add(&pFunc->VMTable, pClass->VMTable.Objects[idx]);
@@ -355,7 +441,7 @@ bool env_instance_class(lac_object_t *pLACClass, lac_object_t *pLACInstance) {
         pFunc->SymTable.CheckPoints[idx] = pClass->SymTable.CheckPoints[idx];
         pFunc->SymTable.iNumEntry = pClass->SymTable.iNumEntry;
         while (pCursor != NULL) {
-            pOldEntryTmp = (hash_table_entry *) pCursor->pData;
+            pOldEntryTmp = (hash_table_entry_t *) pCursor->pData;
             pCurrObject = (*(lac_object_t **) pOldEntryTmp->pData);
             pCurrObject->iRefCnt++; // Decrease the counter
             switch (pCurrObject->Type) {
@@ -368,11 +454,11 @@ bool env_instance_class(lac_object_t *pLACClass, lac_object_t *pLACInstance) {
                     pLACObjectTmp = env_create_lac_vec(pCurrObject->Name, (int) strlen(pCurrObject->Name), ((lac_vec_t *) pCurrObject->Child)->iLength, ((lac_vec_t *) pCurrObject->Child)->iSize,
                                                        ((lac_vec_t *) pCurrObject->Child)->pData);
                     pEntryTmp = hash_table_gen_entry(pOldEntryTmp->Key, &pLACObjectTmp, sizeof(lac_object_t *));
-                    queue_push_back(&pFunc->SymTable.Data[idx], (void *) pEntryTmp, sizeof(hash_table_entry));
+                    queue_push_back(&pFunc->SymTable.Data[idx], (void *) pEntryTmp, sizeof(hash_table_entry_t));
                 case LAC_VAR:
                     pLACObjectTmp = env_create_lac_var(pCurrObject->Name, (int) strlen(pCurrObject->Name), ((lac_var_t *) pCurrObject->Child)->Object);
                     pEntryTmp = hash_table_gen_entry(pOldEntryTmp->Key, &pLACObjectTmp, sizeof(lac_object_t *));
-                    queue_push_back(&pFunc->SymTable.Data[idx], (void *) pEntryTmp, sizeof(hash_table_entry));
+                    queue_push_back(&pFunc->SymTable.Data[idx], (void *) pEntryTmp, sizeof(hash_table_entry_t));
                     break;
             }
             queue_next(&pCursor);
@@ -383,6 +469,11 @@ bool env_instance_class(lac_object_t *pLACClass, lac_object_t *pLACInstance) {
 
 }
 
+/** @brief This function destroys a lac object
+ * 
+ * @param pLACObject Object
+ * @return A bool vavlue, status code
+ */
 int destroy_lac_obj(lac_object_t *pLACObject) {
     /* Destroy a lac object */
     e_vm_func_type FuncTypeTmp;
@@ -394,7 +485,7 @@ int destroy_lac_obj(lac_object_t *pLACObject) {
             ((lac_var_t *) pLACObject->Child)->Object->iRefCnt--;
             break;
         case LAC_FUNC:
-            FuncTypeTmp = ((lac_func_t *) pLACObject->Child)->FuncType;
+            FuncTypeTmp = ((lac_func_t *) pLACObject->Child)->Type;
             switch (FuncTypeTmp) {
 
                 case VM_FUNC_CTRL:

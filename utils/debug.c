@@ -121,8 +121,8 @@ void disp_exp_tree(exp_btnode_t ExpTreeRoot) { // OK to pass the exptree's root 
             queue_push_back(&queDepth, (void *) &iNewDepth, sizeof(int));
         }
 
-        queue_pop_front(&queTmp, NULL); // dequeue the visited data
-        queue_pop_front(&queDepth, NULL); // dequeue the visited depth
+        queue_pop_front(&queTmp, NULL, TRUE); // dequeue the visited data
+        queue_pop_front(&queDepth, NULL, TRUE); // dequeue the visited depth
     }
     printf("\n-------------------------\n\n");
 }
@@ -132,11 +132,11 @@ void disp_symtable(hash_symtable_t *pSymTable) {
 
     printf("------ Symbol Table -----\n");
     queue_node_t *pCursor;
-    hash_table_entry *pEntryTmp;
+    hash_table_entry_t *pEntryTmp;
     for (int i = 0; i < HASH_TABLE_LEN; i++) {
         pCursor = pSymTable->Data[i].pFront;
         while (pCursor != NULL) {
-            pEntryTmp = (hash_table_entry *) pCursor->pData;
+            pEntryTmp = (hash_table_entry_t *) pCursor->pData;
             printf("%s(%d) -> ", pEntryTmp->Key, ((lac_func_t *) (*(lac_object_t **) pEntryTmp->pData)->Child)->iCFA);
             fflush(stdout);
             queue_next(&pCursor);

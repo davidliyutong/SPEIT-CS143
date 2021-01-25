@@ -1,13 +1,21 @@
 //
 // Created by 厉宇桐 on 2020/12/31.
 //
-
+/**@file  cfa.h
+* @brief    Definition of Global Code Field Address
+* @details  This file contains definition of global Code Field Address(CFA) for the entire project
+* @author      厉宇桐
+* @date        2020/12/31.
+*/
 #ifndef LAC_CFAS_H
 #define LAC_CFAS_H
 
+/**@brief This corresponds to a wrong basic function */
 #define VM_CFA_ERROR (-1)
 
+/**@brief This corresponds to a wrong basic function */
 #define VM_CFA_DUP 0
+
 #define VM_CFA_DROP 1
 #define VM_CFA_SWAP 2
 #define VM_CFA_DOT 3

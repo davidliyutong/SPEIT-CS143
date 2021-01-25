@@ -1,9 +1,16 @@
 //
 // Created by 厉宇桐 on 2020/12/28.
 //
-
+/** @file object.c
+ * @brief This file contains function definition related to a object operation
+ * @details There are two parts: 1. VM table operations 2. Hash symbol table operations
+ * @author 厉宇桐
+ * @data 2020/12/28
+ */
+ 
 #include "object.h"
 
+/** @brief The invalid_func is an invalid lac function object used during function declaration */
 lac_func_t invalid_func = {VM_FUNC_BASIC};
 lac_object_t vmtable_invalid_func = {0, LAC_FUNC, "", &invalid_func};
 
@@ -108,10 +115,10 @@ bool hash_symtable_checkout(hash_table_t *pSymTable) {
 }
 
 bool hash_symtable_revert(hash_table_t *pSymTable) {
-    hash_table_entry OldEntryTmp;
+    hash_table_entry_t OldEntryTmp;
     for (int idx = 0; idx < HASH_TABLE_LEN; idx++) {
         while (pSymTable->Data[idx].iLength > pSymTable->CheckPoints[idx]) {
-            queue_pop_back_no_free(&pSymTable->Data[idx], (void *) &OldEntryTmp);
+            queue_pop_back(&pSymTable->Data[idx], (void *) &OldEntryTmp, FALSE);
             (*(lac_object_t **) OldEntryTmp.pData)->iRefCnt--; // Decrease the counter
             free(OldEntryTmp.pData);
             pSymTable->iNumEntry--;
@@ -120,10 +127,10 @@ bool hash_symtable_revert(hash_table_t *pSymTable) {
     return TRUE;
 }
 
-hash_table_query_res hash_symtable_search(hash_table_t *pSymTable, const char *pKey, int iLength) {
+hash_table_query_res_t hash_symtable_search(hash_table_t *pSymTable, const char *pKey, int iLength) {
     /* Search a hash_table entry by its key (char) */
     char sKey[MAX_KEY_LEN + 1] = {0};
-    hash_table_query_res res = {ERR_SYMBOL_OVERFLOW, NULL};
+    hash_table_query_res_t res = {ERR_SYMBOL_OVERFLOW, NULL};
 
     if (iLength > MAX_KEY_LEN) return res;
     strncpy(sKey, pKey, (size_t) iLength);
@@ -132,7 +139,7 @@ hash_table_query_res hash_symtable_search(hash_table_t *pSymTable, const char *p
     return res;
 }
 
-symbol_status hash_symtable_add_obj(hash_table_t *pSymTable, const char *pSymbolStr, int iLength, lac_object_t *pLACObject) {
+e_symbol_status hash_symtable_add_obj(hash_table_t *pSymTable, const char *pSymbolStr, int iLength, lac_object_t *pLACObject) {
     /* iSize is the size of pValue */
 
     if (iLength > MAX_KEY_LEN) return ERR_SYMBOL_OVERFLOW;
@@ -141,28 +148,28 @@ symbol_status hash_symtable_add_obj(hash_table_t *pSymTable, const char *pSymbol
     char sKey[MAX_KEY_LEN + 1] = {0};
     strncpy(sKey, pSymbolStr, (size_t) iLength);
 
-    hash_table_query_res QueryRes;
+    hash_table_query_res_t QueryRes;
     QueryRes = hash_symtable_search(pSymTable, sKey, iLength);
     int iRet;
 
-    hash_table_entry *pEntryTmp;
+    hash_table_entry_t *pEntryTmp;
     pEntryTmp = hash_table_gen_entry(sKey, &pLACObject, sizeof(lac_object_t *));
-    hash_table_entry OldEntryTmp;
+    hash_table_entry_t OldEntryTmp;
 
     if (QueryRes.pNode == NULL) {
         /* No such item */
-        queue_push_back(&pSymTable->Data[QueryRes.idx], (void *) pEntryTmp, sizeof(hash_table_entry));
+        queue_push_back(&pSymTable->Data[QueryRes.idx], (void *) pEntryTmp, sizeof(hash_table_entry_t));
         pLACObject->iRefCnt++;
         pSymTable->iNumEntry++;
         return INFO_SYMBOL_NOT_FOUND;
     } else {
         /* Duplicated item, modify */
-        iRet = queue_del_no_free(&pSymTable->Data[QueryRes.idx], QueryRes.pNode, (void *) &OldEntryTmp, TRUE);
+        iRet = queue_del(&pSymTable->Data[QueryRes.idx], QueryRes.pNode, (void *) &OldEntryTmp, TRUE, FALSE);
         if (iRet != TRUE) return (ERR_SYMBOL_OVERFLOW);
         (*(lac_object_t **) OldEntryTmp.pData)->iRefCnt--;
         free(OldEntryTmp.pData);
 
-        queue_push_back(&pSymTable->Data[QueryRes.idx], pEntryTmp, sizeof(hash_table_entry));
+        queue_push_back(&pSymTable->Data[QueryRes.idx], pEntryTmp, sizeof(hash_table_entry_t));
         pLACObject->iRefCnt++;
         return SYMBOL_OK;
     }
@@ -170,36 +177,36 @@ symbol_status hash_symtable_add_obj(hash_table_t *pSymTable, const char *pSymbol
 
 lac_object_t *hash_symtable_get_obj(hash_table_t *pSymTable, const char *pSymbolStr, int iLength) {
     /* iSize is the size of pValue */
-    hash_table_query_res QueryRes;
+    hash_table_query_res_t QueryRes;
     lac_object_t *pObj;
 
     QueryRes = hash_symtable_search(pSymTable, pSymbolStr, iLength);
     if (QueryRes.pNode == NULL) {
         return NULL;
     }
-    pObj = *(lac_object_t **) ((hash_table_entry *) QueryRes.pNode->pData)->pData;
+    pObj = *(lac_object_t **) ((hash_table_entry_t *) QueryRes.pNode->pData)->pData;
     return pObj;
 }
 
-lac_object_t *hash_symtable_get_obj_from_query(hash_table_query_res QueryRes) {
+lac_object_t *hash_symtable_get_obj_from_query(hash_table_query_res_t QueryRes) {
     /* iSize is the size of pValue */
     if (QueryRes.pNode == NULL) {
         return NULL;
     } else {
-        return *(lac_object_t **) (((hash_table_entry *) QueryRes.pNode->pData)->pData);
+        return *(lac_object_t **) (((hash_table_entry_t *) QueryRes.pNode->pData)->pData);
     }
 }
 
 bool hash_symtable_set_obj(hash_table_t *pSymTable, const char *pSymbolStr, int iLength, lac_object_t *pLACObject) {
     /* This function modifies the value of a entry in symbol table */
-    hash_table_query_res QueryRes;
+    hash_table_query_res_t QueryRes;
 
     QueryRes = hash_symtable_search(pSymTable, pSymbolStr, iLength);
     if (QueryRes.pNode == NULL) {
         return FALSE;
     }
     pLACObject->iRefCnt++;
-    (*(lac_object_t **) ((hash_table_entry *) QueryRes.pNode->pData)->pData)->iRefCnt--;
-    *(lac_object_t **) ((hash_table_entry *) QueryRes.pNode->pData)->pData = pLACObject;
+    (*(lac_object_t **) ((hash_table_entry_t *) QueryRes.pNode->pData)->pData)->iRefCnt--;
+    *(lac_object_t **) ((hash_table_entry_t *) QueryRes.pNode->pData)->pData = pLACObject;
     return TRUE;
 }

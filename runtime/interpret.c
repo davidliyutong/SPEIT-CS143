@@ -29,7 +29,7 @@ void exec_vm(lac_object_t *pLACFunctionObject) {
         case LAC_FUNC:
             pFunction = (lac_func_t *) pLACFunctionObject->Child;
             CFACurr = pFunction->iCFA;
-            FuncTypeCurr = pFunction->FuncType;
+            FuncTypeCurr = pFunction->Type;
             switch (FuncTypeCurr) {
                 case VM_FUNC_BASIC:
                 case VM_FUNC_CTRL:
@@ -85,7 +85,7 @@ void exec_vm(lac_object_t *pLACFunctionObject) {
 }
 
 void exec_symbol(lac_queue_t *pQueRes, lexeme_t LexTmp, compile_stat_t CompileStat) {
-    hash_table_query_res SymbolQueryRes;
+    hash_table_query_res_t SymbolQueryRes;
     lac_object_t *pLACObjectTmp; // Immediate var/vec
     lac_func_t *pLACFuncTmp;
 
@@ -108,7 +108,7 @@ void exec_symbol(lac_queue_t *pQueRes, lexeme_t LexTmp, compile_stat_t CompileSt
                 return;
             case LAC_FUNC:
                 pLACFuncTmp = (lac_func_t *) pLACObjectTmp->Child;
-                switch (pLACFuncTmp->FuncType) {
+                switch (pLACFuncTmp->Type) {
                     case VM_FUNC_BASIC:
                     case VM_FUNC_LAC:
                         exec_vm(pLACObjectTmp);
@@ -150,14 +150,14 @@ void import_extern_lib(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     lexeme_t FileName;
     lexeme_t ModuleName;
     lexeme_t AsTmp;
-    queue_pop_front(pQueRes, (void *) &FileName);
+    queue_pop_front(pQueRes, (void *) &FileName, TRUE);
     if (queue_is_empty(pQueRes) == TRUE) {
         ModuleName = FileName;
     } else {
-        queue_pop_front(pQueRes, (void *) &AsTmp);
+        queue_pop_front(pQueRes, (void *) &AsTmp, TRUE);
         /* import ... as ... or import ... */
         if (strncmp(AsTmp.pString, "as", 2) == 0 && AsTmp.iLength == 2) {
-            queue_pop_front(pQueRes, (void *) &ModuleName);
+            queue_pop_front(pQueRes, (void *) &ModuleName, TRUE);
         } else {
             queue_push_front(pQueRes, (void *) &AsTmp, sizeof(lexeme_t));
             ModuleName = FileName;
@@ -165,7 +165,7 @@ void import_extern_lib(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     }
 
 
-    hash_table_query_res SymbolQueryRes;
+    hash_table_query_res_t SymbolQueryRes;
     SymbolQueryRes = hash_symtable_search_all(ModuleName, CompileStat);
     if (SymbolQueryRes.pNode != NULL) {
         /* The file is already imported */
@@ -230,7 +230,7 @@ void interpret(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
 #endif
 
     while (queue_is_empty(pQueRes) != TRUE) {
-        queue_pop_front(pQueRes, (void *) &LexTmp);
+        queue_pop_front(pQueRes, (void *) &LexTmp, TRUE);
         /* Case it is a number */
 
         switch (LexTmp.type) {

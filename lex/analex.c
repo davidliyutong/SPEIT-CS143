@@ -1,15 +1,24 @@
 //
 // Created by 厉宇桐 on 2020/10/28.
 //
-// Code to perform lexical analyze
-
+/**@file  analex.c
+* @brief    Code to perform lexical analyze
+* @details  
+* @author      厉宇桐
+* @date        2020/10/28
+*/
 
 #include "analex.h"
 
+/** @brief This function judges if a lexeme (string(pcBeg -> pcFin)) is integer using regex expression
+ * 
+ * @param pcBeg Begin of lexeme in string
+ * @param pcFin End of lexeme in string
+ * @param pRegInteger compiled regex expression
+ * @return A bool value. TRUE If the the lexeme is integer, FALSE if no
+ * @remark Here the regex is used for all real numbers 
+ */
 inline int isInteger(const char *pcBeg, const char *pcFin, regex_t *pRegInteger) {
-    /* This function can tell if a string(pcBeg -> pcFin) is an integer ) */
-    /* [?] Here the regex is used for all real numbers */
-
     int iStart;
     int iRet;
 
@@ -17,6 +26,7 @@ inline int isInteger(const char *pcBeg, const char *pcFin, regex_t *pRegInteger)
     int iEnd;
     iRet = regexec(pRegInteger, pcBeg, 1, pMatch, 0);
     if (iRet == REG_NOMATCH) {
+        /* No match, break */
         return FALSE;
     } else {
         iStart = (int) pMatch[0].rm_so;
@@ -31,12 +41,20 @@ inline int isInteger(const char *pcBeg, const char *pcFin, regex_t *pRegInteger)
     }
 }
 
+/** @brief This function is used to match identifiers
+ * 
+ * @param psReadBuffer Input string
+ * @param pcIDBeg Begin of match range
+ * @param pcIDFin End of match range
+ * @param pRegIdentifier Regex_t ID matcher
+ * @param pRegInteger Regex_t Number matcher
+ * @param pQueRes results
+ * @return 
+ * @remark It will also check if the identifier is a number
+ */
 inline int match_id(const char *psReadBuffer, const char *pcIDBeg, const char *pcIDFin, regex_t *pRegIdentifier,
                     regex_t *pRegInteger,
                     lac_queue_t *pQueRes) {
-    /* This function is used to match identifiers */
-    /* It will also check if the identifier is a number */
-
     int iRet;
     int iOffset;
     regmatch_t pMatch[MAX_MATCH_NUM];
@@ -82,12 +100,20 @@ inline int match_id(const char *psReadBuffer, const char *pcIDBeg, const char *p
     return TRUE;
 }
 
+/** @brief This function matches strings from pcStringBeg to pcStringFin
+ * 
+ * @param psReadBuffer Input string
+ * @param pcIDBeg Begin of match range
+ * @param pcIDFin End of match range
+ * @param pRegIdentifier Regex_t ID matcher
+ * @param pRegInteger Regex_t Number matcher
+ * @param pQueRes results
+ * @return 
+ * @remarks - It also match the identifiers from pcStringBeg to the begin of first string match
+ *          -  Then it loops until all the strings are matched
+ */
 inline int match_string(const char *psReadBuffer, const char *pcStringBeg, const char *pcStringFin, regex_t *pRegString,
                         regex_t *pRegIdnetifier, regex_t *pRegInteger, lac_queue_t *pQueRes) {
-    /* This function matches strings from pcStringBeg to pcStringFin*/
-    /* It also match the identifiers from pcStringBeg to the begin of first string match */
-    /* Then it loops until all the strings are matched */
-
     int iRet;
     int iOffset;
     regmatch_t pMatch[MAX_MATCH_NUM];
@@ -138,12 +164,19 @@ inline int match_string(const char *psReadBuffer, const char *pcStringBeg, const
     return TRUE;
 }
 
+/** @brief This function matches comment from psReadBuffer to pcReadBufferFin
+ * 
+ * @param psReadBuffer Input string
+ * @param pcIDBeg Begin of match range
+ * @param pcIDFin End of match range
+ * @param pRegIdentifier Regex_t ID matcher
+ * @param pRegInteger Regex_t Number matcher
+ * @param pQueRes results
+ * @return 
+ * @remarks - It also match the strings from psReadBuffer to the begin of first comment match
+ *          - Then it loops until all the comments are matched
+ */
 int match_lac(char *psReadBuffer, char *pcReadBufferFin, lac_queue_t *pQueRes) {
-    /* This function matches comment from psReadBuffer to pcReadBufferFin*/
-    /* It also match the strings from psReadBuffer to the begin of first comment match */
-    /* Then it loops until all the comments are matched */
-
-
     int iRet = 0;
     // Definition of 3 regex parser
     regex_t regComment;
@@ -154,6 +187,7 @@ int match_lac(char *psReadBuffer, char *pcReadBufferFin, lac_queue_t *pQueRes) {
     iRet += regcomp(&regString, REGEX_STRING, REG_EXTENDED);
     iRet += regcomp(&regIdentifier, REGEX_IDENTIFIER, REG_EXTENDED);
     iRet += regcomp(&regInteger, REGEX_INTEGER, REG_EXTENDED);
+    ///@todo The three regex_t can be made global to avoid frequent compile and free operation
     if (iRet > 0) exit(ERR_REGEX); // the compile has failed, let OS to handle
 
     regmatch_t pMatch[MAX_MATCH_NUM]; // Match results
@@ -197,6 +231,11 @@ int match_lac(char *psReadBuffer, char *pcReadBufferFin, lac_queue_t *pQueRes) {
     return TRUE;
 }
 
+/** @brief This function matches keywords
+ * 
+ * @param LexTmp The lexeme
+ * @return e_interpret_stat, match result
+ */
 inline e_interpret_stat match_keyword(lexeme_t LexTmp) {
 
     if (strncmp(LexTmp.pString, ":", 1) == 0 && (LexTmp.iLength) == 1) {

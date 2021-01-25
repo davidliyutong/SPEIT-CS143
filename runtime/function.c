@@ -22,13 +22,13 @@ bool concat_func_name(char psDst[], char *psScope, char *psName, int iLength) {
     }
 }
 
-hash_table_query_res hash_symtable_search_all(lexeme_t LexTmp, compile_stat_t CompileStat) {
+hash_table_query_res_t hash_symtable_search_all(lexeme_t LexTmp, compile_stat_t CompileStat) {
     /* Search local and global symbole table */
     /* Lexeme str should be prepared */
     char LexemeStrScope[MAX_LEXEME_LEN] = {0};
     char LexemeStrModule[MAX_LEXEME_LEN] = {0};
     int iRet;
-    hash_table_query_res SymbolQueryRes = {-1, NULL};
+    hash_table_query_res_t SymbolQueryRes = {-1, NULL};
 
     iRet = concat_func_name(LexemeStrScope, CompileStat.sScopeName, LexTmp.pString, LexTmp.iLength);
     if (!iRet) {
@@ -86,7 +86,7 @@ bool compile_function(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     int iImmVal; // Immediate value
     int iRet;
     bool bFuncCompileRes;
-    hash_table_query_res SymbolQueryRes;
+    hash_table_query_res_t SymbolQueryRes;
     e_interpret_stat InterpretType;
 
     lac_object_t *pLACObjectTmp;
@@ -97,7 +97,7 @@ bool compile_function(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     /* Get the name of symbol */
 
     if (!CompileStat.bIf && !CompileStat.bWhile) { // compiling function or class with out if / while
-        queue_pop_front(pQueRes, (void *) &LexTmp);
+        queue_pop_front(pQueRes, (void *) &LexTmp, TRUE);
         if (LexTmp.type != WORD) {
             printf("\n[ Warning ] Function not properly named, invalid name\n");
             g_env_reset();
@@ -152,7 +152,7 @@ bool compile_function(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
             return FALSE;
         }
 
-        queue_pop_front(pQueRes, (void *) &LexTmp);
+        queue_pop_front(pQueRes, (void *) &LexTmp, TRUE);
 
         /* match keywords */
         InterpretType = match_keyword(LexTmp);
@@ -384,7 +384,7 @@ void declare_function(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     char LexemeStrTmp[MAX_LEXEME_LEN];
 
     /* Get the name of symbol */
-    queue_pop_front(pQueRes, (void *) &FuncName);
+    queue_pop_front(pQueRes, (void *) &FuncName, TRUE);
 
     if (FuncName.type != WORD) {
         printf("\n[ Warning ] Function not properly named, invalid name\n");
@@ -442,12 +442,12 @@ void link_declaration(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     lexeme_t LexDst, LexSrc, LexIs;
     lac_object_t *pDstFunction;
     lac_object_t *pSrcFunction;
-    hash_table_query_res DstSymbolQueryRes, SrcSymbolQueryRes;
+    hash_table_query_res_t DstSymbolQueryRes, SrcSymbolQueryRes;
 
     /* Get the name of declaration and function */
-    queue_pop_front(pQueRes, (void *) &LexSrc);
-    queue_pop_front(pQueRes, (void *) &LexIs);
-    queue_pop_front(pQueRes, (void *) &LexDst);
+    queue_pop_front(pQueRes, (void *) &LexSrc, TRUE);
+    queue_pop_front(pQueRes, (void *) &LexIs, TRUE);
+    queue_pop_front(pQueRes, (void *) &LexDst, TRUE);
 
     /* Syntax check */
     int iLexIsLength = LexIs.iEnd - LexIs.iStart;
@@ -499,7 +499,7 @@ void link_declaration(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
         queue_node_t *pCursor;
         char LexemeStrTmp[MAX_LEXEME_LEN] = {0};
         char InstanceName[MAX_LEXEME_LEN] = {0};
-        hash_table_entry *pOldEntryTmp;
+        hash_table_entry_t *pOldEntryTmp;
         lac_object_t *pLACObjectTmp;
         int iRet;
 
@@ -511,7 +511,7 @@ void link_declaration(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
         for (int idx = 0; idx < HASH_TABLE_LEN; idx++) {
             pCursor = pFunc->SymTable.Data[idx].pFront;
             while (pCursor != NULL) {
-                pOldEntryTmp = (hash_table_entry *) pCursor->pData;
+                pOldEntryTmp = (hash_table_entry_t *) pCursor->pData;
                 pLACObjectTmp = *(lac_object_t **) pOldEntryTmp->pData;
                 iRet = concat_func_name(LexemeStrTmp, InstanceName, pOldEntryTmp->Key, (int) strlen(pOldEntryTmp->Key));
                 if (!iRet) {
@@ -544,7 +544,7 @@ void declare_var(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
 
 
     /* Get the name of symbol */
-    queue_pop_front(pQueRes, (void *) &VarName);
+    queue_pop_front(pQueRes, (void *) &VarName, TRUE);
     if (VarName.type != WORD) {
         printf("\n[ Warning ] Variable not properly named, invalid name\n");
         g_env_reset();
@@ -609,7 +609,7 @@ void declare_vec(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     char LexemeStrTmp[MAX_LEXEME_LEN];
 
     /* Get the name of symbol */
-    queue_pop_front(pQueRes, (void *) &VecName);
+    queue_pop_front(pQueRes, (void *) &VecName, TRUE);
 
     if (VecName.type != WORD) {
         printf("\n[ Warning ] Vec not properly named, invalid name\n");
@@ -627,7 +627,7 @@ void declare_vec(lac_queue_t *pQueRes, compile_stat_t CompileStat) {
     }
 
     /* Get the length of vector */
-    queue_pop_front(pQueRes, (void *) &VecLength);
+    queue_pop_front(pQueRes, (void *) &VecLength, TRUE);
     int iVecLen = (int) strtol(VecLength.pString, NULL, 10);
     if (iVecLen <= 0) {
         /* There is a syntax error */

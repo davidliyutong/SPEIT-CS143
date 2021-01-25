@@ -168,7 +168,7 @@ int gen_postfix_exp(lac_queue_t *pQuePostfixExp, lac_queue_t *pQueSymbols) {
     exp_btnode_t SymbolTmp;
     exp_btnode_t OpTmp;
     while (!queue_is_empty(pQueSymbols)) {
-        queue_pop_front(pQueSymbols, (void *) &SymbolTmp); // scan the queue, pick a symbol,
+        queue_pop_front(pQueSymbols, (void *) &SymbolTmp, TRUE); // scan the queue, pick a symbol,
 
         if (SymbolTmp.type == CALC_NUMBER) {
             /* If it is a number, push it in the postfix expression */

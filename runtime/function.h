@@ -36,7 +36,7 @@ typedef struct compile_stat_t {
 
 bool compile_function(lac_queue_t *pQueRes, compile_stat_t CompileStat);
 
-hash_table_query_res hash_symtable_search_all(lexeme_t LexTmp, compile_stat_t CompileStat);
+hash_table_query_res_t hash_symtable_search_all(lexeme_t LexTmp, compile_stat_t CompileStat);
 
 void declare_function(lac_queue_t *pQueRes, compile_stat_t CompileStat);
 
